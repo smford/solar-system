@@ -43,6 +43,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 | Zoom In / Out | Scroll wheel or two-finger trackpad swipe |
 | Focus Planet / Belt | Click on a planet, label, or bottom bar chip |
 | Reset Overview | Escape key or Reset View button |
+| Toggle Fullscreen | F key or Fullscreen button |
 | Surface Sky View | V key or Surface View button / drawer action |
 | Toggle Belts | B key or Belts button |
 | Toggle AU Grid | G key or Grid button |

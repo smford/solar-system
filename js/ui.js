@@ -26,6 +26,7 @@ export class UIController {
     this.btnSurfaceView = document.getElementById('btn-surface-view');
     this.bodyQuickBar = document.getElementById('body-quick-bar');
     this.resetViewBtn = document.getElementById('btn-reset-view');
+    this.btnFullscreen = document.getElementById('btn-fullscreen');
     this.toggleUiBtn = document.getElementById('btn-toggle-ui');
 
     // Surface View HUD Banner Elements
@@ -279,6 +280,27 @@ export class UIController {
       });
     }
 
+    // Toggle Fullscreen Button
+    if (this.btnFullscreen) {
+      this.btnFullscreen.addEventListener('click', () => {
+        this.toggleFullscreen();
+      });
+    }
+
+    // Native Fullscreen Change Listeners
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        this.updateFullscreenUI();
+        if (this.engine) {
+          if (typeof this.engine.onWindowResize === 'function') {
+            this.engine.onWindowResize();
+          } else if (typeof this.engine.onResize === 'function') {
+            this.engine.onResize();
+          }
+        }
+      });
+    });
+
     // Toggle All Controls (Cinema Mode)
     if (this.toggleUiBtn) {
       this.toggleUiBtn.addEventListener('click', () => {
@@ -287,48 +309,116 @@ export class UIController {
     }
 
     // Keyboard Shortcuts
-    window.addEventListener('keydown', (e) => {
-      const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT';
+    window.addEventListener('keydown', (e) => this.handleKeyDown(e));
+  }
 
-      // Toggle UI visibility with 'H' key (when not typing in an input/select)
-      if ((e.key === 'h' || e.key === 'H') && !isInput) {
-        this.toggleUIVisibility();
-      }
+  /**
+   * Handle global keyboard navigation shortcuts
+   */
+  handleKeyDown(e) {
+    const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
 
-      // Toggle Asteroid Belts visibility with 'B' key
-      if ((e.key === 'b' || e.key === 'B') && !isInput) {
-        const visible = this.engine.toggleBelts();
-        this.updateBeltsButtonUI(visible);
-      }
+    // Toggle Fullscreen with 'F' key
+    if ((e.code === 'KeyF' || e.key === 'f' || e.key === 'F') && !isInput) {
+      e.preventDefault();
+      this.toggleFullscreen();
+      return;
+    }
 
-      // Toggle Astronomical Distance Grid visibility with 'G' key
-      if ((e.key === 'g' || e.key === 'G') && !isInput) {
-        const visible = this.engine.toggleGrid();
-        this.updateGridButtonUI(visible);
-      }
+    // Toggle UI visibility with 'H' key
+    if ((e.key === 'h' || e.key === 'H') && !isInput) {
+      this.toggleUIVisibility();
+      return;
+    }
 
-      // Toggle Planetarium Surface Sky View with 'V' key
-      if ((e.key === 'v' || e.key === 'V') && !isInput) {
-        this.engine.toggleSurfaceView();
-      }
+    // Toggle Asteroid Belts visibility with 'B' key
+    if ((e.key === 'b' || e.key === 'B') && !isInput) {
+      const visible = this.engine.toggleBelts();
+      this.updateBeltsButtonUI(visible);
+      return;
+    }
 
-      // Space for Play/Pause
-      if (e.code === 'Space' && !isInput) {
-        e.preventDefault();
-        const currentlyPaused = this.engine.physics.isPaused;
-        if (currentlyPaused) {
-          if (this.currentSpeedMagnitude === 0) {
-            this.setSpeed(1.0, true);
-          } else {
-            this.engine.physics.isPaused = false;
-            this.updatePlayPauseUI(false);
-          }
+    // Toggle Astronomical Distance Grid visibility with 'G' key
+    if ((e.key === 'g' || e.key === 'G') && !isInput) {
+      const visible = this.engine.toggleGrid();
+      this.updateGridButtonUI(visible);
+      return;
+    }
+
+    // Toggle Planetarium Surface Sky View with 'V' key
+    if ((e.key === 'v' || e.key === 'V') && !isInput) {
+      this.engine.toggleSurfaceView();
+      return;
+    }
+
+    // Space for Play/Pause
+    if (e.code === 'Space' && !isInput) {
+      e.preventDefault();
+      const currentlyPaused = this.engine.physics.isPaused;
+      if (currentlyPaused) {
+        if (this.currentSpeedMagnitude === 0) {
+          this.setSpeed(1.0, true);
         } else {
-          this.engine.physics.isPaused = true;
-          this.updatePlayPauseUI(true);
+          this.engine.physics.isPaused = false;
+          this.updatePlayPauseUI(false);
         }
+      } else {
+        this.engine.physics.isPaused = true;
+        this.updatePlayPauseUI(true);
       }
-    });
+    }
+  }
+
+  /**
+   * Cross-browser native Fullscreen API toggle
+   */
+  toggleFullscreen() {
+    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    if (!isFull) {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(err => console.warn('Fullscreen request denied:', err));
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) {
+        docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => console.warn('Exit fullscreen error:', err));
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+  }
+
+  /**
+   * Synchronize Fullscreen HUD button state, icon, and tooltip
+   */
+  updateFullscreenUI(isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement)) {
+    if (!this.btnFullscreen) return;
+    this.btnFullscreen.classList.toggle('active', isFull);
+    this.btnFullscreen.title = isFull ? 'Exit Fullscreen (F)' : 'Toggle Fullscreen (F)';
+    const label = this.btnFullscreen.querySelector('.toggle-fullscreen-label');
+    if (label) {
+      label.textContent = isFull ? 'EXIT FULL' : 'FULLSCREEN';
+    }
+    const icon = this.btnFullscreen.querySelector('svg');
+    if (icon) {
+      if (isFull) {
+        // Collapsing 4-corner arrows SVG icon for exiting fullscreen
+        icon.innerHTML = `<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>`;
+      } else {
+        // Expanding 4-corner arrows SVG icon for entering fullscreen
+        icon.innerHTML = `<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>`;
+      }
+    }
   }
 
   buildHistoricalEventsSelect() {

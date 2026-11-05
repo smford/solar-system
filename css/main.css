@@ -364,6 +364,13 @@ html, body {
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
 }
 
+#btn-fullscreen.active {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.16);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+}
+
 .hud-btn.belts-off,
 .hud-btn.grid-off,
 .hud-btn.surface-off {
@@ -1021,6 +1028,7 @@ body.ui-hidden #scale-toggle,
 body.ui-hidden #btn-toggle-belts,
 body.ui-hidden #btn-toggle-grid,
 body.ui-hidden #btn-surface-view,
+body.ui-hidden #btn-fullscreen,
 body.ui-hidden #btn-reset-view,
 body.ui-hidden .control-dock,
 body.ui-hidden .telemetry-drawer,

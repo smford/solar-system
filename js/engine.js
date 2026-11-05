@@ -1498,6 +1498,10 @@ export class SimulationEngine {
     this.renderer.setSize(width, height);
   }
 
+  onWindowResize() {
+    this.onResize();
+  }
+
   onMouseMove(event) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
