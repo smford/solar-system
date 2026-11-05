@@ -13,6 +13,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 ### Key Capabilities
 
 - Real Planetary Textures: High-resolution surface maps sourced from NASA, JPL, and USGS missions (SDO for the Sun, MESSENGER for Mercury, Blue Marble for Earth, Cassini for Jupiter and Saturn, and Voyager 2 for Uranus and Neptune).
+- Planetarium Surface Sky View Mode: Place the camera directly onto the surface of Earth, Mars, the Moon, Titan, or any other world looking outward into the sky. Experience realistic day/night cycles with sunrises and sunsets, celestial planetary alignments, and moon transits with smooth optical field-of-view zoom.
 - Curated Historical Events & Flybys: Built-in milestone navigator allowing one-click time jumps and camera tracking to landmark missions and alignments (Apollo 11 Moon Landing 1969, Voyager 2 Neptune Flyby 1989, Cassini Saturn Orbit Insertion 2004, Voyager 1 Interstellar Crossing 2012, New Horizons Pluto Encounter 2015, Great Conjunction of Jupiter & Saturn 2020, Mars Perseverance Landing 2021, and North American Total Solar Eclipse 2024) with full mission telemetry, scientific significance, and spacecraft details.
 - 3D Asteroid & Kuiper Belts: Thousands of individual, irregular, low-poly rocky and icy planetesimals rendered in high-performance single draw calls using `THREE.InstancedMesh`. Each asteroid follows its own differential Keplerian orbit around the Sun ($\omega \propto r^{-3/2}$) with authentic carbonaceous, silicate, metallic, and volatile ice colorations.
 - Astronomical Distance Grid (AU Circles): Concentric polar distance benchmark rings (0.5 AU, 1.0 AU Earth baseline, 1.5 AU, 2.0 AU, 3.0 AU, 5.2 AU Jupiter, 10.0 AU Saturn, 20.0 AU Uranus, 30.0 AU Neptune, 40.0 AU, and 50.0 AU) with dynamic scale interpolation and screen-space distance annotations in AU and millions/billions of kilometers.
@@ -42,6 +43,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 | Zoom In / Out | Scroll wheel or two-finger trackpad swipe |
 | Focus Planet / Belt | Click on a planet, label, or bottom bar chip |
 | Reset Overview | Escape key or Reset View button |
+| Surface Sky View | V key or Surface View button / drawer action |
 | Toggle Belts | B key or Belts button |
 | Toggle AU Grid | G key or Grid button |
 | Hide / Show UI | H key or Hide UI button |

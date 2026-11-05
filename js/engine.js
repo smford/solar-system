@@ -29,6 +29,12 @@ export class SimulationEngine {
     this.hoveredBodyId = null;
     this.selectedBodyId = null;
 
+    // Planetarium Surface Sky View Mode state
+    this.isSurfaceView = false;
+    this.surfaceBodyId = null;
+    this.lastSurfaceRotation = null;
+    this.onSurfaceViewChange = null;
+
     // Camera tweening state
     this.isTransitioningCamera = false;
     this.cameraStartPos = new THREE.Vector3();
@@ -1363,6 +1369,11 @@ export class SimulationEngine {
     // 4e. Update Astronomical Polar Distance Grid (AU Circles) and annotations
     this.updateGrid();
 
+    // 4f. Update Planetarium Surface View camera pinned to the rotating planet
+    if (this.isSurfaceView && this.surfaceBodyId) {
+      this.updateSurfaceView();
+    }
+
     // 5. Update 2D screen positions of all planetary locator markers
     this.updatePlanetMarkers();
   }
@@ -1425,6 +1436,12 @@ export class SimulationEngine {
       const body = this.bodies[key];
       if (!body) continue;
 
+      // When in surface view, hide the marker of the planet we are standing on
+      if (this.isSurfaceView && this.surfaceBodyId === key) {
+        marker.style.display = 'none';
+        continue;
+      }
+
       body.mesh.getWorldPosition(wp);
       const dist = this.camera.position.distanceTo(wp);
 
@@ -1461,10 +1478,14 @@ export class SimulationEngine {
     // High-performance adaptive wheel zoom (Mac trackpad & mouse wheel calibrated)
     dom.addEventListener('wheel', (e) => this.onWheel(e), { passive: false, capture: true });
 
-    // Keyboard ESC to reset view
+    // Keyboard ESC to reset view or exit surface view
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        this.resetCameraView();
+        if (this.isSurfaceView) {
+          this.exitSurfaceView();
+        } else {
+          this.resetCameraView();
+        }
       }
     });
   }
@@ -1489,6 +1510,22 @@ export class SimulationEngine {
    * High-performance adaptive wheel zooming calibrated for Mac trackpads & discrete wheels
    */
   onWheel(e) {
+    if (this.isSurfaceView) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) {
+        dy *= 28; // Lines to pixels
+      } else if (e.deltaMode === 2) {
+        dy *= 350; // Pages to pixels
+      }
+      const clampedDy = Math.max(-100, Math.min(100, dy));
+      this.camera.fov = Math.max(12, Math.min(75, this.camera.fov + clampedDy * 0.05));
+      this.camera.updateProjectionMatrix();
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -1598,10 +1635,14 @@ export class SimulationEngine {
     if (intersects.length > 0) {
       const hit = intersects[0].object;
       const targetId = hit.userData.bodyId;
+      if (this.isSurfaceView) {
+        if (targetId === this.surfaceBodyId) return;
+        this.exitSurfaceView();
+      }
       this.focusBody(targetId);
     } else {
-      // If clicked empty space while focusing a body, reset
-      if (this.selectedBodyId) {
+      // If clicked empty space while focusing a body in orbital mode, reset
+      if (this.selectedBodyId && !this.isSurfaceView) {
         this.resetCameraView();
       }
     }
@@ -1621,6 +1662,29 @@ export class SimulationEngine {
    */
   focusBody(bodyId) {
     if (!this.bodies[bodyId] && !this.moons[bodyId] && !this.belts[bodyId]) return;
+
+    // If switching focus while in surface view, exit surface view cleanly first
+    if (this.isSurfaceView) {
+      if (this.surfaceBodyId && this.bodies[this.surfaceBodyId]?.haloMesh && !this.bodies[this.surfaceBodyId]?.config?.hasRings) {
+        this.bodies[this.surfaceBodyId].haloMesh.visible = true;
+      }
+      if (this.surfaceBodyId && this.orbitLines[this.surfaceBodyId]) {
+        this.orbitLines[this.surfaceBodyId].visible = true;
+      }
+      this.isSurfaceView = false;
+      this.surfaceBodyId = null;
+      this.lastSurfaceRotation = null;
+      this.camera.fov = 45;
+      this.camera.near = 0.1;
+      this.camera.updateProjectionMatrix();
+      this.controls.minDistance = 2.0;
+      this.controls.maxDistance = 30000;
+      this.controls.maxPolarAngle = Math.PI * 0.88;
+      this.controls.enablePan = true;
+      if (this.onSurfaceViewChange) {
+        this.onSurfaceViewChange(false, null);
+      }
+    }
 
     // Reset previous selected orbit line
     if (this.selectedBodyId) {
@@ -1687,6 +1751,29 @@ export class SimulationEngine {
    * Reset camera to zoomed-out solar top-down / isometric perspective
    */
   resetCameraView() {
+    // If in surface view, restore surface state
+    if (this.isSurfaceView) {
+      if (this.surfaceBodyId && this.bodies[this.surfaceBodyId]?.haloMesh && !this.bodies[this.surfaceBodyId]?.config?.hasRings) {
+        this.bodies[this.surfaceBodyId].haloMesh.visible = true;
+      }
+      if (this.surfaceBodyId && this.orbitLines[this.surfaceBodyId]) {
+        this.orbitLines[this.surfaceBodyId].visible = true;
+      }
+      this.isSurfaceView = false;
+      this.surfaceBodyId = null;
+      this.lastSurfaceRotation = null;
+      this.camera.fov = 45;
+      this.camera.near = 0.1;
+      this.camera.updateProjectionMatrix();
+      this.controls.minDistance = 2.0;
+      this.controls.maxDistance = 30000;
+      this.controls.maxPolarAngle = Math.PI * 0.88;
+      this.controls.enablePan = true;
+      if (this.onSurfaceViewChange) {
+        this.onSurfaceViewChange(false, null);
+      }
+    }
+
     if (this.selectedBodyId) {
       const prevLine = this.orbitLines[this.selectedBodyId] || this.moons[this.selectedBodyId]?.orbitLine;
       if (prevLine) {
@@ -1718,6 +1805,209 @@ export class SimulationEngine {
     if (this.onSelectBody) {
       this.onSelectBody(null);
     }
+  }
+
+  /**
+   * Enter Planetarium Surface Sky View Mode
+   * Positions camera directly onto the surface of selected planet or moon, looking outward into the sky
+   */
+  enterSurfaceView(bodyId = null) {
+    let targetId = bodyId || this.selectedBodyId || 'earth';
+
+    // Validate bodyId: Sun and belts are not suitable for surface view, fallback to Earth
+    if (targetId === 'sun' || targetId === 'mainBelt' || targetId === 'kuiperBelt' || (!this.bodies[targetId] && !this.moons[targetId])) {
+      targetId = 'earth';
+    }
+
+    // If switching from another surface body, restore previous body's halo/orbit line
+    if (this.isSurfaceView && this.surfaceBodyId && this.surfaceBodyId !== targetId) {
+      if (this.bodies[this.surfaceBodyId]?.haloMesh && !this.bodies[this.surfaceBodyId]?.config?.hasRings) {
+        this.bodies[this.surfaceBodyId].haloMesh.visible = true;
+      }
+      if (this.orbitLines[this.surfaceBodyId]) {
+        this.orbitLines[this.surfaceBodyId].visible = true;
+      }
+    }
+
+    this.isSurfaceView = true;
+    this.surfaceBodyId = targetId;
+    this.selectedBodyId = targetId;
+    this.isTransitioningCamera = false;
+    this.targetZoomDist = null;
+
+    // Hide halo mesh and orbit line of the body we are standing on so they don't obstruct the sky view
+    if (this.bodies[targetId]?.haloMesh) {
+      this.bodies[targetId].haloMesh.visible = false;
+    }
+    if (this.orbitLines[targetId]) {
+      this.orbitLines[targetId].visible = false;
+    }
+
+    const isMoon = !!this.moons[targetId];
+    const bodyObj = isMoon ? this.moons[targetId] : this.bodies[targetId];
+    const bodyPos = bodyObj.group.position;
+    const bodyRadius = isMoon
+      ? this.physics.getMoonDimensions(bodyObj.config).radius
+      : this.physics.getBodyDimensions(targetId).radius;
+    const currentRot = isMoon
+      ? this.physics.calculateMoonAxialRotation(bodyObj.config)
+      : this.physics.calculateAxialRotation(targetId);
+    const tilt = isMoon ? 0 : THREE.MathUtils.degToRad(bodyObj.config.axialTilt || 0);
+
+    // Equatorial surface normal rotating with planet axial spin and tilted by axial tilt
+    const surfaceNormal = new THREE.Vector3(Math.cos(currentRot), 0, Math.sin(currentRot));
+    if (tilt !== 0) {
+      surfaceNormal.applyAxisAngle(new THREE.Vector3(0, 0, 1), tilt);
+    }
+    surfaceNormal.normalize();
+
+    // East tangent vector along planet axial rotation
+    const eastVector = new THREE.Vector3(-Math.sin(currentRot), 0, Math.cos(currentRot));
+    if (tilt !== 0) {
+      eastVector.applyAxisAngle(new THREE.Vector3(0, 0, 1), tilt);
+    }
+    eastVector.normalize();
+
+    // Outward zenith/horizon vector (~45 deg elevation above the horizon towards East)
+    const outwardVector = surfaceNormal.clone().multiplyScalar(0.7).addScaledVector(eastVector, 0.7).normalize();
+
+    // Position camera on the outer surface: bodyPos + surfaceNormal * (bodyRadius * 1.002)
+    const cameraPos = bodyPos.clone().addScaledVector(surfaceNormal, bodyRadius * 1.002);
+    this.camera.position.copy(cameraPos);
+    this.camera.near = 0.005;
+    this.camera.fov = 45;
+    this.camera.updateProjectionMatrix();
+
+    // Controls target outward along local zenith/horizon vector
+    this.controls.minDistance = 10.0;
+    this.controls.maxDistance = 200.0;
+    this.controls.maxPolarAngle = Math.PI * 0.98;
+    this.controls.enablePan = false;
+    this.controls.target.copy(cameraPos).addScaledVector(outwardVector, 50.0);
+    this.controls.update();
+
+    this.lastSurfaceRotation = currentRot;
+
+    if (this.onSelectBody) {
+      this.onSelectBody(targetId);
+    }
+
+    if (this.onSurfaceViewChange) {
+      this.onSurfaceViewChange(true, targetId);
+    }
+  }
+
+  /**
+   * Exit Planetarium Surface Sky View Mode and return to standard orbital camera
+   */
+  exitSurfaceView() {
+    if (!this.isSurfaceView) return;
+
+    const targetBodyId = this.surfaceBodyId || this.selectedBodyId || 'earth';
+
+    // Restore halo mesh visibility
+    if (this.surfaceBodyId && this.bodies[this.surfaceBodyId]?.haloMesh && !this.bodies[this.surfaceBodyId]?.config?.hasRings) {
+      this.bodies[this.surfaceBodyId].haloMesh.visible = true;
+    }
+
+    // Restore orbit line visibility
+    if (this.surfaceBodyId && this.orbitLines[this.surfaceBodyId]) {
+      this.orbitLines[this.surfaceBodyId].visible = true;
+    }
+
+    this.isSurfaceView = false;
+    this.surfaceBodyId = null;
+    this.lastSurfaceRotation = null;
+
+    // Restore camera properties
+    this.camera.fov = 45;
+    this.camera.near = 0.1;
+    this.camera.updateProjectionMatrix();
+
+    // Restore orbital controls
+    this.controls.minDistance = 2.0;
+    this.controls.maxDistance = 30000;
+    this.controls.maxPolarAngle = Math.PI * 0.88;
+    this.controls.enablePan = true;
+
+    // Focus body in standard orbital view
+    this.focusBody(targetBodyId);
+
+    if (this.onSurfaceViewChange) {
+      this.onSurfaceViewChange(false, null);
+    }
+  }
+
+  /**
+   * Toggle between Planetarium Surface View and standard orbital view
+   */
+  toggleSurfaceView(bodyId = null) {
+    if (this.isSurfaceView) {
+      if (bodyId && bodyId !== this.surfaceBodyId && bodyId !== 'sun' && bodyId !== 'mainBelt' && bodyId !== 'kuiperBelt') {
+        this.enterSurfaceView(bodyId);
+      } else {
+        this.exitSurfaceView();
+      }
+    } else {
+      this.enterSurfaceView(bodyId);
+    }
+  }
+
+  /**
+   * Update surface camera position and target pinned to the orbiting and rotating planet
+   */
+  updateSurfaceView() {
+    if (!this.isSurfaceView || !this.surfaceBodyId) return;
+
+    const isMoon = !!this.moons[this.surfaceBodyId];
+    const bodyObj = isMoon ? this.moons[this.surfaceBodyId] : this.bodies[this.surfaceBodyId];
+    if (!bodyObj) return;
+
+    const bodyPos = bodyObj.group.position;
+    const bodyRadius = isMoon
+      ? this.physics.getMoonDimensions(bodyObj.config).radius
+      : this.physics.getBodyDimensions(this.surfaceBodyId).radius;
+    const currentRot = isMoon
+      ? this.physics.calculateMoonAxialRotation(bodyObj.config)
+      : this.physics.calculateAxialRotation(this.surfaceBodyId);
+    const tilt = isMoon ? 0 : THREE.MathUtils.degToRad(bodyObj.config.axialTilt || 0);
+
+    // Surface normal in world coordinates
+    const surfaceNormal = new THREE.Vector3(Math.cos(currentRot), 0, Math.sin(currentRot));
+    if (tilt !== 0) {
+      surfaceNormal.applyAxisAngle(new THREE.Vector3(0, 0, 1), tilt);
+    }
+    surfaceNormal.normalize();
+
+    // Surface camera position: bodyPos + surfaceNormal * (bodyRadius * 1.002)
+    const newSurfacePos = bodyPos.clone().addScaledVector(surfaceNormal, bodyRadius * 1.002);
+
+    // Rotation axis of the celestial body
+    const rotAxis = new THREE.Vector3(-Math.sin(tilt), Math.cos(tilt), 0).normalize();
+
+    // Rotation delta since last frame
+    let deltaRot = 0;
+    if (this.lastSurfaceRotation !== null && !isNaN(this.lastSurfaceRotation)) {
+      deltaRot = currentRot - this.lastSurfaceRotation;
+    }
+    this.lastSurfaceRotation = currentRot;
+
+    // Gaze direction from camera to target
+    let lookDir = this.controls.target.clone().sub(this.camera.position);
+    if (lookDir.lengthSq() < 0.0001) {
+      lookDir.copy(surfaceNormal);
+    } else {
+      lookDir.normalize();
+    }
+
+    // Rotate gaze direction with planet's axial rotation (clamp extreme deltas on epoch jumps)
+    if (Math.abs(deltaRot) > 1e-7 && Math.abs(deltaRot) < 1.0) {
+      lookDir.applyAxisAngle(rotAxis, deltaRot);
+    }
+
+    // Pin camera to the surface and controls target outward along gaze direction
+    this.camera.position.copy(newSurfacePos);
+    this.controls.target.copy(newSurfacePos).addScaledVector(lookDir, 50.0);
   }
 
   startCameraTween(endCameraPos, endTargetPos) {
@@ -1772,8 +2062,8 @@ export class SimulationEngine {
     // Simulation update step (physics, orbits, axial rotations, shadows, night lights, markers)
     this.update(deltaSeconds);
 
-    // 6. Camera target tracking if a body or moon is selected
-    if (this.selectedBodyId && !this.isTransitioningCamera) {
+    // 6. Camera target tracking if a body or moon is selected in orbital mode
+    if (this.selectedBodyId && !this.isTransitioningCamera && !this.isSurfaceView) {
       const targetBody = this.bodies[this.selectedBodyId] || this.moons[this.selectedBodyId];
       if (targetBody) {
         const targetPos = targetBody.group.position;
@@ -1784,8 +2074,8 @@ export class SimulationEngine {
       }
     }
 
-    // 7. Smooth adaptive zoom interpolation
-    if (this.targetZoomDist !== null && !this.isTransitioningCamera) {
+    // 7. Smooth adaptive zoom interpolation in orbital mode
+    if (this.targetZoomDist !== null && !this.isTransitioningCamera && !this.isSurfaceView) {
       const currentOffset = this.camera.position.clone().sub(this.controls.target);
       const currentDist = currentOffset.length();
       const diff = this.targetZoomDist - currentDist;

@@ -23,9 +23,15 @@ export class UIController {
     this.scaleModeToggle = document.getElementById('scale-toggle');
     this.btnToggleBelts = document.getElementById('btn-toggle-belts');
     this.btnToggleGrid = document.getElementById('btn-toggle-grid');
+    this.btnSurfaceView = document.getElementById('btn-surface-view');
     this.bodyQuickBar = document.getElementById('body-quick-bar');
     this.resetViewBtn = document.getElementById('btn-reset-view');
     this.toggleUiBtn = document.getElementById('btn-toggle-ui');
+
+    // Surface View HUD Banner Elements
+    this.surfaceViewBanner = document.getElementById('surface-view-banner');
+    this.surfaceViewBannerText = document.getElementById('surface-view-banner-text');
+    this.btnExitSurfaceView = document.getElementById('btn-exit-surface-view');
 
     // Telemetry Drawer Elements
     this.telemetryDrawer = document.getElementById('telemetry-drawer');
@@ -60,6 +66,11 @@ export class UIController {
       if (this.fpsDisplay) {
         this.fpsDisplay.textContent = `${fps} FPS`;
       }
+    };
+    this.engine.onSurfaceViewChange = (isActive, bodyId) => {
+      this.updateSurfaceButtonUI(isActive);
+      this.updateSurfaceBannerUI(isActive, bodyId);
+      this.updateTelemetrySurfaceBtnUI(isActive, bodyId);
     };
 
     // Start UI update loop for epoch timer
@@ -202,6 +213,20 @@ export class UIController {
       });
     }
 
+    // Toggle Planetarium Surface Sky View
+    if (this.btnSurfaceView) {
+      this.btnSurfaceView.addEventListener('click', () => {
+        this.engine.toggleSurfaceView();
+      });
+    }
+
+    // Exit Planetarium Surface Sky View from Banner
+    if (this.btnExitSurfaceView) {
+      this.btnExitSurfaceView.addEventListener('click', () => {
+        this.engine.exitSurfaceView();
+      });
+    }
+
     // Reset View
     if (this.resetViewBtn) {
       this.resetViewBtn.addEventListener('click', () => {
@@ -280,6 +305,11 @@ export class UIController {
       if ((e.key === 'g' || e.key === 'G') && !isInput) {
         const visible = this.engine.toggleGrid();
         this.updateGridButtonUI(visible);
+      }
+
+      // Toggle Planetarium Surface Sky View with 'V' key
+      if ((e.key === 'v' || e.key === 'V') && !isInput) {
+        this.engine.toggleSurfaceView();
       }
 
       // Space for Play/Pause
@@ -497,6 +527,40 @@ export class UIController {
     this.btnToggleGrid.title = visible ? 'Toggle Astronomical AU Distance Grid (G)' : 'Show Astronomical AU Distance Grid (G)';
   }
 
+  updateSurfaceButtonUI(active) {
+    if (!this.btnSurfaceView) return;
+    const label = this.btnSurfaceView.querySelector('.toggle-surface-label');
+    if (label) {
+      label.textContent = active ? 'SURFACE: ON' : 'SURFACE: OFF';
+    }
+    this.btnSurfaceView.classList.toggle('active', active);
+    this.btnSurfaceView.classList.toggle('surface-off', !active);
+    this.btnSurfaceView.title = active ? 'Exit Planetarium Surface Sky View (V)' : 'Toggle Planetarium Surface Sky View (V)';
+  }
+
+  updateSurfaceBannerUI(active, bodyId) {
+    if (!this.surfaceViewBanner || !this.surfaceViewBannerText) return;
+    if (active && bodyId) {
+      const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId);
+      const name = config ? config.name.toUpperCase() : bodyId.toUpperCase();
+      this.surfaceViewBannerText.textContent = `SURFACE VIEW — LOOKING OUT FROM ${name} (ESC OR V TO EXIT)`;
+      this.surfaceViewBanner.style.display = 'flex';
+    } else {
+      this.surfaceViewBanner.style.display = 'none';
+    }
+  }
+
+  updateTelemetrySurfaceBtnUI(active, bodyId) {
+    const btn = document.getElementById('btn-telemetry-surface');
+    if (!btn) return;
+    const label = btn.querySelector('.drawer-surface-label');
+    const isCurrentSurface = active && this.engine.surfaceBodyId === bodyId;
+    btn.classList.toggle('active', isCurrentSurface);
+    if (label) {
+      label.textContent = isCurrentSurface ? 'EXIT SURFACE VIEW' : 'VIEW FROM SURFACE';
+    }
+  }
+
   handleBodySelected(bodyId) {
     // Update quick bar active state
     const chips = this.bodyQuickBar.querySelectorAll('.body-chip');
@@ -550,6 +614,28 @@ export class UIController {
       descEl.style.marginBottom = '0.75rem';
       descEl.textContent = config.description;
       this.telemetryStats.appendChild(descEl);
+    }
+
+    // Planetarium Surface View Quick Action Button
+    if (bodyId !== 'sun' && bodyId !== 'mainBelt' && bodyId !== 'kuiperBelt') {
+      const surfaceBtn = document.createElement('button');
+      surfaceBtn.id = 'btn-telemetry-surface';
+      const isCurrentSurface = this.engine.isSurfaceView && this.engine.surfaceBodyId === bodyId;
+      surfaceBtn.className = `drawer-surface-btn ${isCurrentSurface ? 'active' : ''}`;
+      surfaceBtn.title = isCurrentSurface ? 'Return to orbital view (V)' : 'Place camera on surface looking outward into the sky (V)';
+      surfaceBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M3 20h18"/>
+        </svg>
+        <span class="drawer-surface-label">${isCurrentSurface ? 'EXIT SURFACE VIEW' : 'VIEW FROM SURFACE'}</span>
+      `;
+      surfaceBtn.addEventListener('click', () => {
+        this.engine.toggleSurfaceView(bodyId);
+        this.closeTelemetry();
+      });
+      this.telemetryStats.appendChild(surfaceBtn);
     }
 
     const stats = config.telemetry || {};
@@ -606,6 +692,28 @@ export class UIController {
       descEl.style.borderBottom = '1px solid rgba(255, 255, 255, 0.08)';
       descEl.textContent = event.description;
       this.telemetryStats.appendChild(descEl);
+    }
+
+    // Planetarium Surface View Quick Action Button for Historical Event Target
+    if (event.target && event.target !== 'sun' && event.target !== 'mainBelt' && event.target !== 'kuiperBelt') {
+      const surfaceBtn = document.createElement('button');
+      surfaceBtn.id = 'btn-telemetry-surface';
+      const isCurrentSurface = this.engine.isSurfaceView && this.engine.surfaceBodyId === event.target;
+      surfaceBtn.className = `drawer-surface-btn ${isCurrentSurface ? 'active' : ''}`;
+      surfaceBtn.title = isCurrentSurface ? 'Return to orbital view (V)' : 'Place camera on surface looking outward into the sky (V)';
+      surfaceBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M3 20h18"/>
+        </svg>
+        <span class="drawer-surface-label">${isCurrentSurface ? 'EXIT SURFACE VIEW' : 'VIEW FROM SURFACE'}</span>
+      `;
+      surfaceBtn.addEventListener('click', () => {
+        this.engine.toggleSurfaceView(event.target);
+        this.closeTelemetry();
+      });
+      this.telemetryStats.appendChild(surfaceBtn);
     }
 
     // Historical Significance Callout
