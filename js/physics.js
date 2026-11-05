@@ -9,6 +9,7 @@ export class PhysicsEngine {
     // Epoch begins at reference date
     this.referenceDate = new Date('2026-01-01T00:00:00Z');
     this.elapsedDays = 0;
+    this.elapsedVisualSeconds = 0;
     this.isPaused = false;
     this.warpMultiplier = 1.0;
     this.scaleMode = 'exploration'; // 'exploration' | 'trueScale'
@@ -57,7 +58,10 @@ export class PhysicsEngine {
     this.scaleInterpolation += (this.targetInterpolation - this.scaleInterpolation) * Math.min(deltaSeconds * lerpSpeed, 1.0);
 
     if (!this.isPaused) {
+      // Orbital progression in Earth days
       this.elapsedDays += deltaSeconds * baseDaysPerSecond * this.warpMultiplier;
+      // Axial rotation progression in visual seconds
+      this.elapsedVisualSeconds += deltaSeconds * this.warpMultiplier;
     }
   }
 
@@ -86,7 +90,7 @@ export class PhysicsEngine {
   }
 
   /**
-   * Calculate 3D orbital position at current epoch
+   * Calculate 3D orbital position at current epoch (Keplerian orbit)
    */
   calculatePosition(bodyId) {
     const config = this.bodies[bodyId];
@@ -137,13 +141,29 @@ export class PhysicsEngine {
 
   /**
    * Calculate axial rotation angle for planetary mesh
+   * Calibrated so Earth rotates once every 24 seconds at 1x speed,
+   * with all other planets matching their exact relative sidereal rotation ratios.
    */
   calculateAxialRotation(bodyId) {
     const config = this.bodies[bodyId];
     if (!config) return 0;
-    const rotPeriod = config.exploration.rotationPeriod || 1.0;
-    const rotSpeed = (2 * Math.PI) / rotPeriod;
-    return rotSpeed * this.elapsedDays;
+
+    const hours = config.rotationHours || 24.0;
+    const sign = Math.sign(hours);
+    const absHours = Math.abs(hours);
+
+    // Visual rotation period in seconds:
+    // Earth (24h) takes 24.0s
+    // Jupiter (9.92h) takes 9.92s
+    // Saturn (10.66h) takes 10.66s
+    // Mars (24.62h) takes 24.62s
+    // Uranus (-17.24h) takes -17.24s (retrograde)
+    // Neptune (16.11h) takes 16.11s
+    // Ultra-slow rotators (Mercury, Venus, Sun) are clamped smoothly to 60-90s for comfortable observation
+    const visualSecondsPerRev = sign * Math.max(9.0, Math.min(90.0, absHours));
+    const angularVelocity = (2 * Math.PI) / visualSecondsPerRev;
+
+    return angularVelocity * this.elapsedVisualSeconds;
   }
 
   /**

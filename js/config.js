@@ -10,13 +10,14 @@ export const CELESTIAL_BODIES = {
     type: 'Yellow Dwarf (G2V)',
     color: '#ffaa33',
     emissive: '#ff7700',
+    rotationHours: 648.0, // 27 Earth days
     // Exploration scale parameters
     exploration: {
       radius: 8.5,
       orbitDistance: 0,
       rotationPeriod: 27.0 // Earth days
     },
-    // True relative astronomical scale (scaled for visual range where 1 AU = 120 units)
+    // True relative astronomical scale
     trueScale: {
       radius: 8.5,
       orbitDistance: 0,
@@ -43,11 +44,12 @@ export const CELESTIAL_BODIES = {
     name: 'Mercury',
     type: 'Terrestrial Planet',
     color: '#cbd5e1',
+    rotationHours: 1407.6, // 58.65 Earth days
     exploration: {
       radius: 2.0,
       orbitDistance: 30,
       orbitPeriod: 87.97, // Earth days
-      rotationPeriod: 58.65 // Earth days
+      rotationPeriod: 58.65
     },
     trueScale: {
       radius: 0.38,
@@ -77,11 +79,12 @@ export const CELESTIAL_BODIES = {
     name: 'Venus',
     type: 'Terrestrial Planet',
     color: '#fde047',
+    rotationHours: -5832.5, // -243 days, retrograde rotation
     exploration: {
       radius: 3.2,
       orbitDistance: 46,
       orbitPeriod: 224.7,
-      rotationPeriod: -243.02 // Retrograde rotation
+      rotationPeriod: -243.02
     },
     trueScale: {
       radius: 0.95,
@@ -111,11 +114,12 @@ export const CELESTIAL_BODIES = {
     name: 'Earth',
     type: 'Terrestrial (Habitable)',
     color: '#60a5fa',
+    rotationHours: 24.0, // 24 hours
     exploration: {
       radius: 3.6,
       orbitDistance: 66,
       orbitPeriod: 365.256,
-      rotationPeriod: 1.0 // 24 hours
+      rotationPeriod: 1.0
     },
     trueScale: {
       radius: 1.0,
@@ -130,6 +134,7 @@ export const CELESTIAL_BODIES = {
     hasMoon: true,
     moon: {
       name: 'Moon (Luna)',
+      rotationHours: 655.7, // 27.32 days
       radiusMultiplier: 0.3,
       orbitDistance: 5.8,
       orbitPeriod: 27.32,
@@ -155,6 +160,7 @@ export const CELESTIAL_BODIES = {
     name: 'Mars',
     type: 'Terrestrial Planet',
     color: '#fb923c',
+    rotationHours: 24.62, // 24.62 hours
     exploration: {
       radius: 2.6,
       orbitDistance: 88,
@@ -189,11 +195,12 @@ export const CELESTIAL_BODIES = {
     name: 'Jupiter',
     type: 'Gas Giant',
     color: '#fcd34d',
+    rotationHours: 9.925, // 9.925 hours (Rapid rotation)
     exploration: {
       radius: 8.8,
       orbitDistance: 132,
       orbitPeriod: 4332.59, // 11.86 Earth years
-      rotationPeriod: 0.414 // 9.92 hours
+      rotationPeriod: 0.414
     },
     trueScale: {
       radius: 3.5,
@@ -223,11 +230,12 @@ export const CELESTIAL_BODIES = {
     name: 'Saturn',
     type: 'Gas Giant (Ring System)',
     color: '#fef08a',
+    rotationHours: 10.656, // 10.656 hours
     exploration: {
       radius: 7.5,
       orbitDistance: 180,
       orbitPeriod: 10759.22, // 29.46 Earth years
-      rotationPeriod: 0.444 // 10.66 hours
+      rotationPeriod: 0.444
     },
     trueScale: {
       radius: 3.0,
@@ -262,11 +270,12 @@ export const CELESTIAL_BODIES = {
     name: 'Uranus',
     type: 'Ice Giant',
     color: '#6ee7b7',
+    rotationHours: -17.24, // -17.24 hours (Retrograde, sideways tilt)
     exploration: {
       radius: 5.2,
       orbitDistance: 230,
       orbitPeriod: 30685.4, // 84.0 Earth years
-      rotationPeriod: -0.718 // Retrograde, 17.24 hours
+      rotationPeriod: -0.718
     },
     trueScale: {
       radius: 1.8,
@@ -302,11 +311,12 @@ export const CELESTIAL_BODIES = {
     name: 'Neptune',
     type: 'Ice Giant',
     color: '#93c5fd',
+    rotationHours: 16.11, // 16.11 hours
     exploration: {
       radius: 5.0,
       orbitDistance: 280,
       orbitPeriod: 60189.0, // 164.8 Earth years
-      rotationPeriod: 0.671 // 16.11 hours
+      rotationPeriod: 0.671
     },
     trueScale: {
       radius: 1.75,
@@ -333,19 +343,19 @@ export const CELESTIAL_BODIES = {
 };
 
 export const TIME_PRESETS = [
-  { label: '-1000x', value: -1000 },
-  { label: '-100x', value: -100 },
-  { label: '-10x', value: -10 },
   { label: 'Pause', value: 0 },
-  { label: '1x (Real)', value: 1 },
-  { label: '10x', value: 10 },
-  { label: '100x', value: 100 },
-  { label: '1000x', value: 1000 }
+  { label: '0.25x', value: 0.25 },
+  { label: '0.5x', value: 0.5 },
+  { label: '1x (Normal)', value: 1.0 },
+  { label: '2x', value: 2.0 },
+  { label: '5x', value: 5.0 },
+  { label: '10x', value: 10.0 },
+  { label: '20x', value: 20.0 }
 ];
 
 export const APP_CONFIG = {
-  defaultScaleMode: 'exploration', // 'exploration' | 'trueScale'
-  baseTimeScaleDaysPerSecond: 10.0,
+  defaultScaleMode: 'exploration',
+  baseTimeScaleDaysPerSecond: 2.5, // 2.5 Earth days pass per real-time second at 1x multiplier
   starfieldCount: 4500,
   defaultCameraPos: { x: 0, y: 440, z: 530 },
   defaultCameraTarget: { x: 0, y: 0, z: 0 }

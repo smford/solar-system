@@ -12,6 +12,7 @@ export class UIController {
     this.epochDisplay = document.getElementById('epoch-display');
     this.fpsDisplay = document.getElementById('fps-display');
     this.playPauseBtn = document.getElementById('btn-play-pause');
+    this.reverseBtn = document.getElementById('btn-reverse');
     this.warpPresetsContainer = document.getElementById('warp-presets');
     this.warpSlider = document.getElementById('warp-slider');
     this.warpValueText = document.getElementById('warp-value-text');
@@ -30,7 +31,8 @@ export class UIController {
     // Tooltip Element
     this.hoverTooltip = document.getElementById('hover-tooltip');
 
-    this.activePresetValue = 1;
+    this.currentSpeedMagnitude = 1.0;
+    this.isReversed = false;
 
     this.init();
   }
@@ -59,12 +61,12 @@ export class UIController {
 
     TIME_PRESETS.forEach(preset => {
       const btn = document.createElement('button');
-      btn.className = `preset-btn ${preset.value === 1 ? 'active' : ''}`;
+      btn.className = `preset-btn ${preset.value === 1.0 ? 'active' : ''}`;
       btn.textContent = preset.label;
-      btn.dataset.warp = preset.value;
+      btn.dataset.speed = preset.value;
 
       btn.addEventListener('click', () => {
-        this.setWarp(preset.value);
+        this.setSpeed(preset.value, true);
       });
 
       this.warpPresetsContainer.appendChild(btn);
@@ -103,27 +105,34 @@ export class UIController {
     // Play/Pause
     if (this.playPauseBtn) {
       this.playPauseBtn.addEventListener('click', () => {
-        const isPaused = this.engine.physics.togglePause();
-        this.updatePlayPauseUI(isPaused);
+        const currentlyPaused = this.engine.physics.isPaused;
+        if (currentlyPaused) {
+          // If paused at 0 speed, resume to 1.0x
+          if (this.currentSpeedMagnitude === 0) {
+            this.setSpeed(1.0, true);
+          } else {
+            this.engine.physics.isPaused = false;
+            this.updatePlayPauseUI(false);
+          }
+        } else {
+          this.engine.physics.isPaused = true;
+          this.updatePlayPauseUI(true);
+        }
       });
     }
 
-    // Warp Slider
+    // Reverse Direction Toggle
+    if (this.reverseBtn) {
+      this.reverseBtn.addEventListener('click', () => {
+        this.toggleReverse();
+      });
+    }
+
+    // Speed Slider (Direct linear speed control)
     if (this.warpSlider) {
       this.warpSlider.addEventListener('input', (e) => {
-        const exponent = parseFloat(e.target.value);
-        // Exponent maps -3..3 to -1000..1000 with 0 at center
-        let val = 0;
-        if (Math.abs(exponent) < 0.1) {
-          val = 0;
-        } else if (exponent > 0) {
-          val = Math.pow(10, exponent);
-        } else {
-          val = -Math.pow(10, -exponent);
-        }
-
-        val = Math.round(val);
-        this.setWarp(val, false);
+        const val = parseFloat(e.target.value);
+        this.setSpeed(val, false);
       });
     }
 
@@ -161,37 +170,63 @@ export class UIController {
       // Space for Play/Pause
       if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
         e.preventDefault();
-        const isPaused = this.engine.physics.togglePause();
-        this.updatePlayPauseUI(isPaused);
+        const currentlyPaused = this.engine.physics.isPaused;
+        if (currentlyPaused) {
+          if (this.currentSpeedMagnitude === 0) {
+            this.setSpeed(1.0, true);
+          } else {
+            this.engine.physics.isPaused = false;
+            this.updatePlayPauseUI(false);
+          }
+        } else {
+          this.engine.physics.isPaused = true;
+          this.updatePlayPauseUI(true);
+        }
       }
     });
   }
 
-  setWarp(multiplier, updateSlider = true) {
-    this.activePresetValue = multiplier;
-    this.engine.physics.setWarpMultiplier(multiplier);
+  /**
+   * Set simulation speed multiplier accurately and update all HUD elements
+   */
+  setSpeed(magnitude, updateSlider = true) {
+    this.currentSpeedMagnitude = magnitude;
 
-    // Update preset buttons UI
+    // Apply signed multiplier to physics
+    const signedMultiplier = (this.isReversed ? -1 : 1) * magnitude;
+    this.engine.physics.setWarpMultiplier(signedMultiplier);
+
+    // Update Speed Badge Text
+    if (this.warpValueText) {
+      const signStr = (this.isReversed && magnitude > 0) ? '-' : '';
+      this.warpValueText.textContent = `${signStr}${magnitude.toFixed(1)}x`;
+    }
+
+    // Update Slider Position
+    if (updateSlider && this.warpSlider) {
+      this.warpSlider.value = magnitude;
+    }
+
+    // Highlight matching preset button
     const presetBtns = this.warpPresetsContainer.querySelectorAll('.preset-btn');
     presetBtns.forEach(btn => {
-      btn.classList.toggle('active', parseFloat(btn.dataset.warp) === multiplier);
+      const presetVal = parseFloat(btn.dataset.speed);
+      btn.classList.toggle('active', Math.abs(presetVal - magnitude) < 0.05);
     });
 
-    if (this.warpValueText) {
-      this.warpValueText.textContent = `${multiplier}x`;
-    }
+    this.updatePlayPauseUI(magnitude === 0);
+  }
 
-    if (updateSlider && this.warpSlider) {
-      if (multiplier === 0) {
-        this.warpSlider.value = 0;
-      } else if (multiplier > 0) {
-        this.warpSlider.value = Math.log10(multiplier);
-      } else {
-        this.warpSlider.value = -Math.log10(-multiplier);
-      }
+  /**
+   * Toggle forward vs reverse orbital simulation direction
+   */
+  toggleReverse() {
+    this.isReversed = !this.isReversed;
+    if (this.reverseBtn) {
+      this.reverseBtn.classList.toggle('active', this.isReversed);
     }
-
-    this.updatePlayPauseUI(multiplier === 0);
+    // Re-apply current speed with new sign
+    this.setSpeed(this.currentSpeedMagnitude, false);
   }
 
   updatePlayPauseUI(isPaused) {
