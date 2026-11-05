@@ -30,6 +30,9 @@
   <!-- Dynamic Planetary Locator Markers & HUD Labels Layer -->
   <div id="planet-labels-layer"></div>
 
+  <!-- Astronomical Distance Grid AU Annotations Layer -->
+  <div id="grid-labels-layer"></div>
+
   <!-- Observatory HUD Top Bar -->
   <header class="hud-header">
     <div class="brand-section">
@@ -72,6 +75,15 @@
           <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
         </svg>
         <span class="toggle-belts-label">BELTS: ON</span>
+      </button>
+
+      <button id="btn-toggle-grid" class="hud-btn active" title="Toggle Astronomical AU Distance Grid (G)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" stroke-dasharray="3 3"/>
+          <circle cx="12" cy="12" r="6"/>
+          <line x1="2" y1="12" x2="22" y2="12" stroke-dasharray="2 2"/>
+        </svg>
+        <span class="toggle-grid-label">GRID: ON</span>
       </button>
 
       <button id="btn-reset-view" class="hud-btn" title="Reset camera to top-down solar perspective (Esc)">
@@ -137,7 +149,7 @@
 
   <!-- Keyboard Hints & Attribution Footer -->
   <footer class="keyboard-hints">
-    [SPACE] PLAY/PAUSE &bull; [B] TOGGLE BELTS &bull; [ESC] RESET VIEW &bull; [H] HIDE/SHOW UI &bull; [DRAG] ROTATE &bull; [SCROLL] ZOOM &bull; IMAGERY: NASA / JPL / USGS / SOLAR SYSTEM SCOPE
+    [SPACE] PLAY/PAUSE &bull; [B] TOGGLE BELTS &bull; [G] AU GRID &bull; [ESC] RESET VIEW &bull; [H] HIDE/SHOW UI &bull; [DRAG] ROTATE &bull; [SCROLL] ZOOM &bull; IMAGERY: NASA / JPL / USGS / SOLAR SYSTEM SCOPE
   </footer>
 
   <!-- Telemetry Slide-in Drawer -->

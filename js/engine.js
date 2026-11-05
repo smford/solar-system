@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CELESTIAL_BODIES, APP_CONFIG, ASTEROID_BELTS } from './config.js';
+import { CELESTIAL_BODIES, APP_CONFIG, ASTEROID_BELTS, AU_GRID_CONFIG } from './config.js';
 import { PhysicsEngine } from './physics.js';
 import { TextureManager, TextureGenerator } from './textures.js';
 
@@ -18,6 +18,11 @@ export class SimulationEngine {
     this.moons = {};
     this.belts = {};
     this.beltsVisible = true;
+    this.gridVisible = true;
+    this.gridGroup = null;
+    this.gridRings = [];
+    this.gridAxes = null;
+    this.gridLabelsContainer = null;
     this.orbitLines = {};
     this.planetMarkers = {};
     this.moonOrbitLine = null;
@@ -54,6 +59,7 @@ export class SimulationEngine {
     this.initLighting();
     this.initCelestialBodies();
     this.initAsteroidBelts();
+    this.initGrid();
     this.initStarfield();
     this.initPlanetMarkers();
     this.initEvents();
@@ -1025,6 +1031,207 @@ export class SimulationEngine {
   }
 
   /**
+   * Initialize Astronomical Polar Distance Grid (AU Benchmark Circles)
+   * in the ecliptic plane (y = 0) with concentric distance loops and annotations
+   */
+  initGrid() {
+    this.gridGroup = new THREE.Group();
+    this.gridGroup.name = 'astronomicalGrid';
+    this.gridRings = [];
+    this.gridLabelsContainer = document.getElementById('grid-labels-layer');
+    if (this.gridLabelsContainer) {
+      this.gridLabelsContainer.innerHTML = '';
+    }
+
+    // Shared 128-segment circular LineLoop in the ecliptic plane (y = 0)
+    const segments = 128;
+    const positions = new Float32Array(segments * 3);
+    for (let i = 0; i < segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      positions[i * 3] = Math.cos(theta);
+      positions[i * 3 + 1] = 0;
+      positions[i * 3 + 2] = Math.sin(theta);
+    }
+    const circleGeometry = new THREE.BufferGeometry();
+    circleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    // Standard celestial styling for astronomical distance circles
+    const normalMaterial = new THREE.LineBasicMaterial({
+      color: new THREE.Color('#334155'),
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+      fog: false
+    });
+
+    // 1.0 AU Earth benchmark circle (enhanced prominence with subtle cyan tint)
+    const benchmarkMaterial = new THREE.LineBasicMaterial({
+      color: new THREE.Color('#38bdf8'),
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      fog: false
+    });
+
+    for (const config of AU_GRID_CONFIG) {
+      const material = config.isBenchmark ? benchmarkMaterial : normalMaterial;
+      const lineLoop = new THREE.LineLoop(circleGeometry, material);
+      lineLoop.userData = { config };
+      this.gridGroup.add(lineLoop);
+
+      let labelEl = null;
+      if (this.gridLabelsContainer) {
+        labelEl = document.createElement('div');
+        labelEl.className = `au-grid-label${config.isBenchmark ? ' benchmark-earth' : ''}`;
+        labelEl.textContent = config.label;
+        this.gridLabelsContainer.appendChild(labelEl);
+      }
+
+      this.gridRings.push({
+        config,
+        mesh: lineLoop,
+        labelEl
+      });
+    }
+
+    // Subtle 4-axis polar crosshair lines (along +/-X, +/-Z) extending to outermost ring
+    const axisPositions = new Float32Array([
+      0, 0, 0,  1, 0, 0,
+      0, 0, 0, -1, 0, 0,
+      0, 0, 0,  0, 0, 1,
+      0, 0, 0,  0, 0, -1
+    ]);
+    const axisGeometry = new THREE.BufferGeometry();
+    axisGeometry.setAttribute('position', new THREE.BufferAttribute(axisPositions, 3));
+    const axisMaterial = new THREE.LineBasicMaterial({
+      color: new THREE.Color('#334155'),
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+      fog: false
+    });
+    this.gridAxes = new THREE.LineSegments(axisGeometry, axisMaterial);
+    this.gridGroup.add(this.gridAxes);
+
+    this.scene.add(this.gridGroup);
+    this.gridGroup.visible = this.gridVisible;
+
+    // Apply initial scale positioning
+    this.updateGrid();
+  }
+
+  /**
+   * Update Astronomical Polar Distance Grid rings & screen-space labels
+   * with smooth scale interpolation between Exploration Scale and True Scale.
+   */
+  updateGrid() {
+    if (!this.gridGroup) return;
+
+    if (!this.gridVisible) {
+      this.gridGroup.visible = false;
+      if (this.gridLabelsContainer) {
+        this.gridLabelsContainer.style.display = 'none';
+      }
+      return;
+    }
+
+    this.gridGroup.visible = true;
+    if (this.gridLabelsContainer) {
+      this.gridLabelsContainer.style.display = '';
+    }
+
+    const t = this.physics.getEffectiveScaleInterpolation();
+    const width = this.container.clientWidth || window.innerWidth;
+    const height = this.container.clientHeight || window.innerHeight;
+
+    // Projected screen position of Sun (coordinate origin)
+    const sunPos = new THREE.Vector3(0, 0, 0).project(this.camera);
+    const sunScreenX = (sunPos.x * 0.5 + 0.5) * width;
+    const sunScreenY = (-sunPos.y * 0.5 + 0.5) * height;
+
+    const labelWorldPos = new THREE.Vector3();
+    let maxR = 0;
+
+    for (const item of this.gridRings) {
+      const { config, mesh, labelEl } = item;
+      const r = config.rExp * (1 - t) + config.rTrue * t;
+      mesh.scale.set(r, 1, r);
+      if (r > maxR) maxR = r;
+
+      if (!labelEl) continue;
+
+      // Project distance annotation positioned along positive X axis in ecliptic plane (y = 0)
+      labelWorldPos.set(r, 0, 0);
+      const camDist = this.camera.position.distanceTo(labelWorldPos);
+
+      labelWorldPos.project(this.camera);
+
+      // Verify in front of camera frustum
+      const inFront = labelWorldPos.z < 1.0;
+      if (!inFront) {
+        labelEl.style.display = 'none';
+        continue;
+      }
+
+      const x = (labelWorldPos.x * 0.5 + 0.5) * width;
+      const y = (-labelWorldPos.y * 0.5 + 0.5) * height;
+
+      // Frustum culling margin
+      if (x < -80 || x > width + 80 || y < -80 || y > height + 80) {
+        labelEl.style.display = 'none';
+        continue;
+      }
+
+      // Screen distance from Sun center
+      const screenDist = Math.hypot(x - sunScreenX, y - sunScreenY);
+
+      // Hide if ring is compressed too close to Sun on screen
+      if (screenDist < 25) {
+        labelEl.style.display = 'none';
+        continue;
+      }
+
+      // Fade gracefully when cramped or when camera is very close up
+      let opacity = config.isBenchmark ? 0.95 : 0.75;
+      if (screenDist < 45) {
+        opacity *= (screenDist - 25) / 20;
+      }
+      if (camDist < 14) {
+        opacity *= Math.max(0, (camDist - 4) / 10);
+      }
+
+      labelEl.style.display = 'block';
+      labelEl.style.transform = `translate(${x}px, ${y}px)`;
+      labelEl.style.opacity = Math.max(0, Math.min(1, opacity)).toFixed(3);
+    }
+
+    if (this.gridAxes) {
+      this.gridAxes.scale.set(maxR, 1, maxR);
+    }
+  }
+
+  /**
+   * Set visibility of the astronomical AU distance grid
+   */
+  setGridVisible(visible) {
+    this.gridVisible = Boolean(visible);
+    if (this.gridGroup) {
+      this.gridGroup.visible = this.gridVisible;
+    }
+    if (this.gridLabelsContainer) {
+      this.gridLabelsContainer.style.display = this.gridVisible ? '' : 'none';
+    }
+    return this.gridVisible;
+  }
+
+  /**
+   * Toggle visibility of the astronomical AU distance grid
+   */
+  toggleGrid() {
+    return this.setGridVisible(!this.gridVisible);
+  }
+
+  /**
    * Update atmospheric Fresnel glow solar illumination vectors
    * Direction points from body/moon towards Sun at origin (0, 0, 0)
    */
@@ -1152,6 +1359,9 @@ export class SimulationEngine {
 
     // 4d. Update 3D Asteroid Belts (Main Belt & Kuiper Belt) with Keplerian revolution and dynamic scale
     this.updateAsteroidBelts();
+
+    // 4e. Update Astronomical Polar Distance Grid (AU Circles) and annotations
+    this.updateGrid();
 
     // 5. Update 2D screen positions of all planetary locator markers
     this.updatePlanetMarkers();

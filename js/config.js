@@ -746,6 +746,25 @@ export const ASTEROID_BELTS = {
 };
 
 /**
+ * Astronomical Polar Distance Grid (AU Circles) Configuration
+ * Concentric circles at standard astronomical benchmark intervals in the ecliptic plane (y = 0).
+ * Dynamic dual-scale interpolation: Exploration Scale (screen-proportional) to True Scale (1 AU = 120.0 units).
+ */
+export const AU_GRID_CONFIG = [
+  { au: 0.5, rExp: 28, rTrue: 60.0, label: '0.5 AU (74.8M km)', isBenchmark: false },
+  { au: 1.0, rExp: 50, rTrue: 120.0, label: '1.0 AU (149.6M km)', isBenchmark: true },
+  { au: 1.5, rExp: 68, rTrue: 180.0, label: '1.5 AU (224.4M km)', isBenchmark: false },
+  { au: 2.0, rExp: 85, rTrue: 240.0, label: '2.0 AU (299.2M km)', isBenchmark: false },
+  { au: 3.0, rExp: 105, rTrue: 360.0, label: '3.0 AU (Asteroid Belt)', isBenchmark: false },
+  { au: 5.2, rExp: 145, rTrue: 624.0, label: '5.2 AU (Jupiter)', isBenchmark: false },
+  { au: 10.0, rExp: 180, rTrue: 1200.0, label: '10.0 AU (Saturn)', isBenchmark: false },
+  { au: 20.0, rExp: 240, rTrue: 2400.0, label: '20.0 AU (Uranus)', isBenchmark: false },
+  { au: 30.0, rExp: 320, rTrue: 3600.0, label: '30.0 AU (Neptune)', isBenchmark: false },
+  { au: 40.0, rExp: 390, rTrue: 4800.0, label: '40.0 AU (Pluto)', isBenchmark: false },
+  { au: 50.0, rExp: 450, rTrue: 6000.0, label: '50.0 AU (Kuiper Outer)', isBenchmark: false }
+];
+
+/**
  * Helper to locate an asteroid belt by id
  */
 export function findBeltById(beltId) {

@@ -21,6 +21,7 @@ export class UIController {
     this.warpValueText = document.getElementById('warp-value-text');
     this.scaleModeToggle = document.getElementById('scale-toggle');
     this.btnToggleBelts = document.getElementById('btn-toggle-belts');
+    this.btnToggleGrid = document.getElementById('btn-toggle-grid');
     this.bodyQuickBar = document.getElementById('body-quick-bar');
     this.resetViewBtn = document.getElementById('btn-reset-view');
     this.toggleUiBtn = document.getElementById('btn-toggle-ui');
@@ -189,6 +190,14 @@ export class UIController {
       });
     }
 
+    // Toggle Astronomical Distance Grid (AU Circles)
+    if (this.btnToggleGrid) {
+      this.btnToggleGrid.addEventListener('click', () => {
+        const visible = this.engine.toggleGrid();
+        this.updateGridButtonUI(visible);
+      });
+    }
+
     // Reset View
     if (this.resetViewBtn) {
       this.resetViewBtn.addEventListener('click', () => {
@@ -243,6 +252,12 @@ export class UIController {
       if ((e.key === 'b' || e.key === 'B') && e.target.tagName !== 'INPUT') {
         const visible = this.engine.toggleBelts();
         this.updateBeltsButtonUI(visible);
+      }
+
+      // Toggle Astronomical Distance Grid visibility with 'G' key
+      if ((e.key === 'g' || e.key === 'G') && e.target.tagName !== 'INPUT') {
+        const visible = this.engine.toggleGrid();
+        this.updateGridButtonUI(visible);
       }
 
       // Space for Play/Pause
@@ -359,6 +374,17 @@ export class UIController {
     this.btnToggleBelts.classList.toggle('active', visible);
     this.btnToggleBelts.classList.toggle('belts-off', !visible);
     this.btnToggleBelts.title = visible ? 'Toggle Asteroid & Kuiper Belts (B)' : 'Show Asteroid & Kuiper Belts (B)';
+  }
+
+  updateGridButtonUI(visible) {
+    if (!this.btnToggleGrid) return;
+    const label = this.btnToggleGrid.querySelector('.toggle-grid-label');
+    if (label) {
+      label.textContent = visible ? 'GRID: ON' : 'GRID: OFF';
+    }
+    this.btnToggleGrid.classList.toggle('active', visible);
+    this.btnToggleGrid.classList.toggle('grid-off', !visible);
+    this.btnToggleGrid.title = visible ? 'Toggle Astronomical AU Distance Grid (G)' : 'Show Astronomical AU Distance Grid (G)';
   }
 
   handleBodySelected(bodyId) {

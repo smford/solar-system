@@ -14,6 +14,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 
 - Real Planetary Textures: High-resolution surface maps sourced from NASA, JPL, and USGS missions (SDO for the Sun, MESSENGER for Mercury, Blue Marble for Earth, Cassini for Jupiter and Saturn, and Voyager 2 for Uranus and Neptune).
 - 3D Asteroid & Kuiper Belts: Thousands of individual, irregular, low-poly rocky and icy planetesimals rendered in high-performance single draw calls using `THREE.InstancedMesh`. Each asteroid follows its own differential Keplerian orbit around the Sun ($\omega \propto r^{-3/2}$) with authentic carbonaceous, silicate, metallic, and volatile ice colorations.
+- Astronomical Distance Grid (AU Circles): Concentric polar distance benchmark rings (0.5 AU, 1.0 AU Earth baseline, 1.5 AU, 2.0 AU, 3.0 AU, 5.2 AU Jupiter, 10.0 AU Saturn, 20.0 AU Uranus, 30.0 AU Neptune, 40.0 AU, and 50.0 AU) with dynamic scale interpolation and screen-space distance annotations in AU and millions/billions of kilometers.
 - Two Scale Modes:
   - Exploration Scale: Radii and distances are balanced for interactive viewing so all planets and orbits can be inspected without getting lost in empty space.
   - True Scale: Shows true proportional distances and sizes, illustrating how vast and empty the solar system really is.
@@ -41,6 +42,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 | Focus Planet / Belt | Click on a planet, label, or bottom bar chip |
 | Reset Overview | Escape key or Reset View button |
 | Toggle Belts | B key or Belts button |
+| Toggle AU Grid | G key or Grid button |
 | Hide / Show UI | H key or Hide UI button |
 | Play / Pause | Spacebar or Play/Pause button |
 | Reverse Time | Reverse toggle button |
