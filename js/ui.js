@@ -22,6 +22,7 @@ export class UIController {
     this.scaleModeToggle = document.getElementById('scale-toggle');
     this.bodyQuickBar = document.getElementById('body-quick-bar');
     this.resetViewBtn = document.getElementById('btn-reset-view');
+    this.toggleUiBtn = document.getElementById('btn-toggle-ui');
 
     // Telemetry Drawer Elements
     this.telemetryDrawer = document.getElementById('telemetry-drawer');
@@ -36,6 +37,7 @@ export class UIController {
 
     this.currentSpeedMagnitude = 1.0;
     this.isReversed = false;
+    this.isUiHidden = false;
 
     this.init();
   }
@@ -190,8 +192,20 @@ export class UIController {
       });
     }
 
+    // Toggle All Controls (Cinema Mode)
+    if (this.toggleUiBtn) {
+      this.toggleUiBtn.addEventListener('click', () => {
+        this.toggleUIVisibility();
+      });
+    }
+
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+      // Toggle UI visibility with 'H' key (when not typing in an input)
+      if ((e.key === 'h' || e.key === 'H') && e.target.tagName !== 'INPUT') {
+        this.toggleUIVisibility();
+      }
+
       // Space for Play/Pause
       if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
         e.preventDefault();
@@ -209,6 +223,39 @@ export class UIController {
         }
       }
     });
+  }
+
+  /**
+   * Toggle visibility of all HUD telemetry, docks, labels, and action buttons
+   */
+  toggleUIVisibility() {
+    this.isUiHidden = !this.isUiHidden;
+    document.body.classList.toggle('ui-hidden', this.isUiHidden);
+
+    if (this.toggleUiBtn) {
+      const label = this.toggleUiBtn.querySelector('.toggle-ui-label');
+      const icon = this.toggleUiBtn.querySelector('svg');
+
+      if (this.isUiHidden) {
+        if (label) label.textContent = 'SHOW UI';
+        this.toggleUiBtn.title = 'Show All Controls (H)';
+        if (icon) {
+          icon.innerHTML = `
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          `;
+        }
+      } else {
+        if (label) label.textContent = 'HIDE UI';
+        this.toggleUiBtn.title = 'Hide All Controls (H)';
+        if (icon) {
+          icon.innerHTML = `
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          `;
+        }
+      }
+    }
   }
 
   /**
