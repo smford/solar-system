@@ -12,7 +12,7 @@ export const CELESTIAL_BODIES = {
     emissive: '#ff7700',
     // Exploration scale parameters
     exploration: {
-      radius: 7.5,
+      radius: 8.5,
       orbitDistance: 0,
       rotationPeriod: 27.0 // Earth days
     },
@@ -44,8 +44,8 @@ export const CELESTIAL_BODIES = {
     type: 'Terrestrial Planet',
     color: '#cbd5e1',
     exploration: {
-      radius: 1.4,
-      orbitDistance: 28,
+      radius: 2.0,
+      orbitDistance: 30,
       orbitPeriod: 87.97, // Earth days
       rotationPeriod: 58.65 // Earth days
     },
@@ -78,8 +78,8 @@ export const CELESTIAL_BODIES = {
     type: 'Terrestrial Planet',
     color: '#fde047',
     exploration: {
-      radius: 2.2,
-      orbitDistance: 42,
+      radius: 3.2,
+      orbitDistance: 46,
       orbitPeriod: 224.7,
       rotationPeriod: -243.02 // Retrograde rotation
     },
@@ -112,8 +112,8 @@ export const CELESTIAL_BODIES = {
     type: 'Terrestrial (Habitable)',
     color: '#60a5fa',
     exploration: {
-      radius: 2.5,
-      orbitDistance: 58,
+      radius: 3.6,
+      orbitDistance: 66,
       orbitPeriod: 365.256,
       rotationPeriod: 1.0 // 24 hours
     },
@@ -130,8 +130,8 @@ export const CELESTIAL_BODIES = {
     hasMoon: true,
     moon: {
       name: 'Moon (Luna)',
-      radiusMultiplier: 0.28,
-      orbitDistance: 5.0,
+      radiusMultiplier: 0.3,
+      orbitDistance: 5.8,
       orbitPeriod: 27.32,
       rotationPeriod: 27.32,
       color: '#cbd5e1'
@@ -156,8 +156,8 @@ export const CELESTIAL_BODIES = {
     type: 'Terrestrial Planet',
     color: '#fb923c',
     exploration: {
-      radius: 1.8,
-      orbitDistance: 76,
+      radius: 2.6,
+      orbitDistance: 88,
       orbitPeriod: 686.98,
       rotationPeriod: 1.026
     },
@@ -190,8 +190,8 @@ export const CELESTIAL_BODIES = {
     type: 'Gas Giant',
     color: '#fcd34d',
     exploration: {
-      radius: 6.8,
-      orbitDistance: 114,
+      radius: 8.8,
+      orbitDistance: 132,
       orbitPeriod: 4332.59, // 11.86 Earth years
       rotationPeriod: 0.414 // 9.92 hours
     },
@@ -224,8 +224,8 @@ export const CELESTIAL_BODIES = {
     type: 'Gas Giant (Ring System)',
     color: '#fef08a',
     exploration: {
-      radius: 5.8,
-      orbitDistance: 156,
+      radius: 7.5,
+      orbitDistance: 180,
       orbitPeriod: 10759.22, // 29.46 Earth years
       rotationPeriod: 0.444 // 10.66 hours
     },
@@ -239,8 +239,8 @@ export const CELESTIAL_BODIES = {
     axialTilt: 26.73,
     hasRings: true,
     ringConfig: {
-      innerRadiusMultiplier: 1.25,
-      outerRadiusMultiplier: 2.35
+      innerRadiusMultiplier: 1.3,
+      outerRadiusMultiplier: 2.4
     },
     orbitColor: '#fef08a',
     telemetry: {
@@ -263,8 +263,8 @@ export const CELESTIAL_BODIES = {
     type: 'Ice Giant',
     color: '#6ee7b7',
     exploration: {
-      radius: 3.8,
-      orbitDistance: 200,
+      radius: 5.2,
+      orbitDistance: 230,
       orbitPeriod: 30685.4, // 84.0 Earth years
       rotationPeriod: -0.718 // Retrograde, 17.24 hours
     },
@@ -303,8 +303,8 @@ export const CELESTIAL_BODIES = {
     type: 'Ice Giant',
     color: '#93c5fd',
     exploration: {
-      radius: 3.7,
-      orbitDistance: 245,
+      radius: 5.0,
+      orbitDistance: 280,
       orbitPeriod: 60189.0, // 164.8 Earth years
       rotationPeriod: 0.671 // 16.11 hours
     },
@@ -347,6 +347,6 @@ export const APP_CONFIG = {
   defaultScaleMode: 'exploration', // 'exploration' | 'trueScale'
   baseTimeScaleDaysPerSecond: 10.0,
   starfieldCount: 4500,
-  defaultCameraPos: { x: 0, y: 380, z: 460 },
+  defaultCameraPos: { x: 0, y: 440, z: 530 },
   defaultCameraTarget: { x: 0, y: 0, z: 0 }
 };

@@ -498,6 +498,87 @@ html, body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
+/* Dynamic Planetary Locator Markers & HUD Labels */
+#planet-labels-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+
+.planet-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  transition: opacity 0.25s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.planet-marker .marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 10px currentColor, 0 0 18px currentColor;
+  flex-shrink: 0;
+  animation: pulse-beacon 2.4s infinite ease-in-out;
+}
+
+@keyframes pulse-beacon {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+    box-shadow: 0 0 14px currentColor, 0 0 24px currentColor;
+  }
+}
+
+.planet-marker .marker-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f8fafc;
+  background: rgba(10, 15, 28, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 3px 8px;
+  border-radius: 5px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.planet-marker:hover .marker-name {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+}
+
+.planet-marker.active .marker-name {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(15, 23, 42, 0.95);
+}
+
 /* Keyboard Hints Footer */
 .keyboard-hints {
   position: absolute;

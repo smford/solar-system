@@ -1,6 +1,7 @@
 /**
  * HELIOS 3D Graphics & Simulation Engine
- * Three.js scene, NASA photographic textures, lighting, starfield, meshes, orbits, and render loop.
+ * Three.js scene, NASA photographic textures, dual illumination, starfield, meshes, prominent orbits,
+ * fast responsive zooming, and screen-space aerospace planetary locator markers.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -15,6 +16,7 @@ export class SimulationEngine {
 
     this.bodies = {};
     this.orbitLines = {};
+    this.planetMarkers = {};
     this.moonOrbitLine = null;
     this.hoveredBodyId = null;
     this.selectedBodyId = null;
@@ -46,20 +48,21 @@ export class SimulationEngine {
     this.initLighting();
     this.initCelestialBodies();
     this.initStarfield();
+    this.initPlanetMarkers();
     this.initEvents();
   }
 
   initScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x020204);
-    // Note: No fog in vacuum of space. Prevents dimming/darkening when zooming out.
+    // Note: No fog in the vacuum of space. Prevents distance darkening.
     this.scene.fog = null;
 
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
 
     // Camera initialized to panoramic view showing all planetary orbits out to Neptune
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 40000);
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 45000);
     this.camera.position.set(APP_CONFIG.defaultCameraPos.x, APP_CONFIG.defaultCameraPos.y, APP_CONFIG.defaultCameraPos.z);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -72,29 +75,39 @@ export class SimulationEngine {
     this.renderer.toneMappingExposure = 1.25;
     this.container.appendChild(this.renderer.domElement);
 
+    // Fast, responsive orbit controls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.06;
+    this.controls.dampingFactor = 0.08;
+    this.controls.zoomSpeed = 2.4; // Fast, snappy, effortless zoom in/out
+    this.controls.rotateSpeed = 1.0;
     this.controls.minDistance = 2.0;
-    this.controls.maxDistance = 25000;
+    this.controls.maxDistance = 30000;
     this.controls.maxPolarAngle = Math.PI * 0.88; // Don't flip under
   }
 
   initLighting() {
-    // Primary central point light emitted from Sun (infinite range, no falloff attenuation)
+    // 1. Primary central point light emitted from Sun (infinite range, no falloff attenuation)
     this.sunLight = new THREE.PointLight(0xffffff, 5.0, 0, 0.0);
     this.sunLight.position.set(0, 0, 0);
     this.scene.add(this.sunLight);
 
-    // Deep-space ambient fill so dark sides of planets remain distinct and readable from high orbit
-    const ambientLight = new THREE.AmbientLight(0x334155, 0.85);
+    // 2. Camera Headlight (Directional light following the camera viewpoint)
+    // Ensures the side of the planet facing the camera is ALWAYS illuminated, bright, and colorful!
+    this.cameraLight = new THREE.DirectionalLight(0xffffff, 0.95);
+    this.cameraLight.position.set(0, 0, 1);
+    this.camera.add(this.cameraLight);
+    this.scene.add(this.camera);
+
+    // 3. Deep-space ambient fill
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     this.scene.add(ambientLight);
   }
 
   initStarfield() {
     // 1. Deep space celestial background sphere with NASA Milky Way panorama
     if (this.textures && this.textures.milkyway) {
-      const skyGeo = new THREE.SphereGeometry(16000, 32, 32);
+      const skyGeo = new THREE.SphereGeometry(18000, 32, 32);
       const skyMat = new THREE.MeshBasicMaterial({
         map: this.textures.milkyway,
         side: THREE.BackSide,
@@ -122,7 +135,7 @@ export class SimulationEngine {
     ];
 
     for (let i = 0; i < starCount; i++) {
-      const radius = 3200 + Math.random() * 5500;
+      const radius = 3500 + Math.random() * 6000;
       const theta = 2 * Math.PI * Math.random();
       const phi = Math.acos(2 * Math.random() - 1);
 
@@ -286,7 +299,7 @@ export class SimulationEngine {
     const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshStandardMaterial({
       map: this.textures[key],
-      roughness: key === 'earth' ? 0.38 : (key === 'venus' ? 0.85 : 0.72),
+      roughness: key === 'earth' ? 0.35 : (key === 'venus' ? 0.8 : 0.6),
       metalness: 0.05
     });
 
@@ -295,6 +308,20 @@ export class SimulationEngine {
     mesh.rotation.z = THREE.MathUtils.degToRad(config.axialTilt || 0);
     mesh.userData = { bodyId: key };
     group.add(mesh);
+
+    // 3D Glowing Locator Halo Ring (ensures immediate visibility from any zoom angle)
+    const haloGeo = new THREE.RingGeometry(1.35, 1.55, 48);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(config.color || 0x38bdf8),
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      fog: false
+    });
+    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
+    haloMesh.rotation.x = Math.PI / 2;
+    mesh.add(haloMesh);
 
     // Earth specific: Atmospheric cloud layer & Moon
     let cloudsMesh = null;
@@ -320,7 +347,7 @@ export class SimulationEngine {
       const moonGeo = new THREE.SphereGeometry(radius * config.moon.radiusMultiplier, 32, 32);
       const moonMat = new THREE.MeshStandardMaterial({
         map: this.textures.moon,
-        roughness: 0.88,
+        roughness: 0.85,
         metalness: 0.05
       });
       moonMesh = new THREE.Mesh(moonGeo, moonMat);
@@ -337,9 +364,9 @@ export class SimulationEngine {
       }
       const moonOrbitGeo = new THREE.BufferGeometry().setFromPoints(moonOrbitPts);
       const moonOrbitMat = new THREE.LineBasicMaterial({
-        color: 0x90a4ae,
+        color: 0x94a3b8,
         transparent: true,
-        opacity: 0.45,
+        opacity: 0.55,
         depthWrite: false,
         fog: false
       });
@@ -354,7 +381,7 @@ export class SimulationEngine {
       mesh.add(ringMesh); // Added directly to mesh so it scales and tilts automatically
     }
 
-    // Vector Planetary Orbit Line (prominent and clearly drawn)
+    // Vector Planetary Orbit Line (vivid, anti-aliased, and clearly drawn)
     const orbitLine = this.buildOrbitLine(key, config);
     this.scene.add(orbitLine);
     this.orbitLines[key] = orbitLine;
@@ -364,6 +391,7 @@ export class SimulationEngine {
     this.bodies[key] = {
       group,
       mesh,
+      haloMesh,
       cloudsMesh,
       moonGroup,
       moonMesh,
@@ -395,7 +423,7 @@ export class SimulationEngine {
       map: this.textures[`${key}Rings`] || this.textures.saturnRings,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: ringCfg.subtle ? 0.4 : 0.95,
+      opacity: ringCfg.subtle ? 0.45 : 0.95,
       roughness: 0.55
     });
 
@@ -405,7 +433,7 @@ export class SimulationEngine {
   }
 
   /**
-   * Draw crisp, clearly visible vector orbit lines for each planet
+   * Draw crisp, vivid, anti-aliased vector orbit lines for each planet
    */
   buildOrbitLine(key, config) {
     const pathPoints = this.physics.generateOrbitPath(key, 256);
@@ -422,7 +450,7 @@ export class SimulationEngine {
     const material = new THREE.LineBasicMaterial({
       color: new THREE.Color(config.orbitColor || 0x666666),
       transparent: true,
-      opacity: 0.65, // Vivid and clearly visible across entire solar system
+      opacity: 0.75, // High visibility across entire solar system
       depthWrite: false,
       fog: false
     });
@@ -442,6 +470,89 @@ export class SimulationEngine {
         positions[i * 3 + 2] = pathPoints[i].z;
       }
       line.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Initialize screen-space planetary locator markers & name badges
+   */
+  initPlanetMarkers() {
+    const container = document.getElementById('planet-labels-layer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    for (const [key, config] of Object.entries(CELESTIAL_BODIES)) {
+      // Create DOM locator badge for each planet
+      const marker = document.createElement('div');
+      marker.className = 'planet-marker';
+      marker.dataset.bodyId = key;
+
+      const dot = document.createElement('span');
+      dot.className = 'marker-dot';
+      dot.style.color = config.color;
+      dot.style.backgroundColor = config.color;
+
+      const name = document.createElement('span');
+      name.className = 'marker-name';
+      name.textContent = config.name.toUpperCase();
+
+      marker.appendChild(dot);
+      marker.appendChild(name);
+
+      marker.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.focusBody(key);
+      });
+
+      marker.addEventListener('mouseenter', () => {
+        this.setHoveredBody(key);
+      });
+
+      marker.addEventListener('mouseleave', () => {
+        if (this.hoveredBodyId === key) {
+          this.setHoveredBody(null);
+        }
+      });
+
+      container.appendChild(marker);
+      this.planetMarkers[key] = marker;
+    }
+  }
+
+  /**
+   * Update 2D screen positions of all planetary locator markers
+   */
+  updatePlanetMarkers() {
+    const width = this.container.clientWidth || window.innerWidth;
+    const height = this.container.clientHeight || window.innerHeight;
+    const wp = new THREE.Vector3();
+
+    for (const [key, marker] of Object.entries(this.planetMarkers)) {
+      const body = this.bodies[key];
+      if (!body) continue;
+
+      body.mesh.getWorldPosition(wp);
+      const dist = this.camera.position.distanceTo(wp);
+
+      wp.project(this.camera);
+
+      // Check if planet is in front of camera
+      const inFront = wp.z < 1.0;
+      if (inFront) {
+        const x = (wp.x * 0.5 + 0.5) * width;
+        const y = (-wp.y * 0.5 + 0.5) * height;
+
+        marker.style.transform = `translate(${x}px, ${y}px)`;
+        marker.style.display = 'flex';
+
+        // When focused very close on a specific planet, fade out its label so it doesn't obstruct close inspection
+        const { radius } = this.physics.getBodyDimensions(key);
+        const isTooClose = this.selectedBodyId === key && dist < radius * 5;
+        marker.style.opacity = isTooClose ? '0' : '1';
+        marker.classList.toggle('active', this.selectedBodyId === key);
+      } else {
+        marker.style.display = 'none';
+      }
     }
   }
 
@@ -508,7 +619,7 @@ export class SimulationEngine {
     // Reset previous hovered line
     if (this.hoveredBodyId && this.orbitLines[this.hoveredBodyId]) {
       const isSelected = this.selectedBodyId === this.hoveredBodyId;
-      this.orbitLines[this.hoveredBodyId].material.opacity = isSelected ? 1.0 : 0.65;
+      this.orbitLines[this.hoveredBodyId].material.opacity = isSelected ? 1.0 : 0.75;
       this.orbitLines[this.hoveredBodyId].material.color.set(isSelected ? 0xffffff : (this.bodies[this.hoveredBodyId].config.orbitColor || 0x666666));
     }
 
@@ -556,7 +667,7 @@ export class SimulationEngine {
 
     // Reset previous selected orbit line
     if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
-      this.orbitLines[this.selectedBodyId].material.opacity = 0.65;
+      this.orbitLines[this.selectedBodyId].material.opacity = 0.75;
       this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
     }
 
@@ -573,7 +684,7 @@ export class SimulationEngine {
     const { radius } = this.physics.getBodyDimensions(bodyId);
 
     // Calculate ideal camera viewing offset
-    const viewDist = Math.max(radius * 4.2, 8.0);
+    const viewDist = Math.max(radius * 4.5, 9.0);
     const cameraEnd = new THREE.Vector3(
       targetPos.x + viewDist * 0.7,
       targetPos.y + viewDist * 0.45,
@@ -592,7 +703,7 @@ export class SimulationEngine {
    */
   resetCameraView() {
     if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
-      this.orbitLines[this.selectedBodyId].material.opacity = 0.65;
+      this.orbitLines[this.selectedBodyId].material.opacity = 0.75;
       this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
     }
 
@@ -725,7 +836,10 @@ export class SimulationEngine {
       }
     }
 
-    // 5. Camera target tracking if a body is selected
+    // 5. Update 2D screen positions of all planetary locator markers
+    this.updatePlanetMarkers();
+
+    // 6. Camera target tracking if a body is selected
     if (this.selectedBodyId && !this.isTransitioningCamera) {
       const targetBody = this.bodies[this.selectedBodyId];
       if (targetBody) {
@@ -737,10 +851,10 @@ export class SimulationEngine {
       }
     }
 
-    // 6. Camera transition interpolation
+    // 7. Camera transition interpolation
     this.updateCameraTween(deltaSeconds);
 
-    // 7. Update orbit controls and render
+    // 8. Update orbit controls and render
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }

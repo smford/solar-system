@@ -21,6 +21,9 @@ A minimalist, high-precision 3D Solar System simulation web application powered 
   - **Uranus & Neptune**: NASA Voyager 2 spacecraft imagery.
   - **Milky Way**: NASA / ESO deep space panorama backdrop.
   - **Procedural Fallback**: Offline-resilient procedural canvas texture generator if network access is restricted.
+- **Aerospace Planetary Locator Beacons & HUD Badges**: Screen-space locator badges with pulsing glowing beacons and clean typography for every planet, guaranteeing instant identification at any zoom level.
+- **Dual Illumination (Central Sunlight + Camera Headlight)**: Eliminates pitch-black shadows from high orbit by casting subtle directional illumination on whichever side of the planet the camera is observing.
+- **Fast, Responsive Zooming**: Tuned orbit controls (`zoomSpeed: 2.4`) for swift, effortless transitions between planetary orbits and solar panoramas.
 - **Full Solar System Zoomed-out Perspective**: Initial camera view is framed to present the entire solar system (from the Sun out through Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, to Neptune's orbit) immediately on load.
 - **Clearly Drawn Planetary Orbits**: Anti-aliased 256-segment vector orbit paths with distinct spectral accent colors and dynamic hover/selection brightening.
 - **Keplerian Orbital Mechanics**: Real-time orbital transforms accounting for semi-major axes, orbital periods, orbital eccentricities, and sidereal axial rotations.
