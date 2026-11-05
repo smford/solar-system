@@ -364,16 +364,19 @@ html, body {
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
 }
 
-#btn-fullscreen.active {
+#btn-fullscreen.active,
+#btn-toggle-audio.active {
   border-color: var(--accent-cyan);
   color: var(--accent-cyan);
   background: rgba(56, 189, 248, 0.16);
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+  opacity: 1;
 }
 
 .hud-btn.belts-off,
 .hud-btn.grid-off,
-.hud-btn.surface-off {
+.hud-btn.surface-off,
+.hud-btn.audio-off {
   opacity: 0.55;
   border-color: rgba(255, 255, 255, 0.06);
   color: var(--text-dim);

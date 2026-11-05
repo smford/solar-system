@@ -8,6 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CELESTIAL_BODIES, APP_CONFIG, ASTEROID_BELTS, AU_GRID_CONFIG } from './config.js';
 import { PhysicsEngine } from './physics.js';
 import { TextureManager, TextureGenerator } from './textures.js';
+import { CosmicAudioEngine } from './audio.js';
 
 export class SimulationEngine {
   constructor(canvasContainer) {
@@ -28,6 +29,9 @@ export class SimulationEngine {
     this.moonOrbitLine = null;
     this.hoveredBodyId = null;
     this.selectedBodyId = null;
+
+    // Procedural Web Audio celestial soundscape synthesizer
+    this.audio = new CosmicAudioEngine();
 
     // Planetarium Surface Sky View Mode state
     this.isSurfaceView = false;
@@ -1238,6 +1242,20 @@ export class SimulationEngine {
   }
 
   /**
+   * Toggle procedural Web Audio API celestial soundscape
+   */
+  toggleAudio() {
+    return this.audio ? this.audio.toggleAudio() : Promise.resolve(false);
+  }
+
+  /**
+   * Check whether procedural celestial audio is currently active
+   */
+  isAudioEnabled() {
+    return this.audio ? this.audio.isEnabled : false;
+  }
+
+  /**
    * Update atmospheric Fresnel glow solar illumination vectors
    * Direction points from body/moon towards Sun at origin (0, 0, 0)
    */
@@ -1464,6 +1482,11 @@ export class SimulationEngine {
       } else {
         marker.style.display = 'none';
       }
+    }
+
+    // 8. Update procedural celestial audio crossfading
+    if (this.audio && this.audio.isEnabled) {
+      this.audio.update(this.camera.position, this.selectedBodyId, this.bodies, this.physics.scaleMode, this.moons);
     }
   }
 

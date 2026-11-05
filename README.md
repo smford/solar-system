@@ -27,6 +27,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
   - Pick any specific date (past or future) to inspect planetary alignments.
   - Forward and reverse simulation time.
   - Linear speed adjustment from 0x (pause) to 20x.
+- Procedural Celestial Audio & Plasma Synthesizer: 100% self-contained Web Audio API synthesizer generating deep-space cosmic background drones and authentic planetary plasma wave radio emissions (Jovian whistlers and magnetospheric chorus, Saturn Kilometric Radiation and ring dust hiss, solar acoustic oscillations, terrestrial auroral kilometric radiation, and thin Martian wind gusts) with automatic 3D proximity and focus crossfading.
 - Smooth Navigation:
   - Exponential zoom scaling calibrated for both mouse wheels and Mac trackpads.
   - Click on any planet, asteroid belt, or locator marker to smoothly fly the camera into tracking orbit.
@@ -44,6 +45,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 | Focus Planet / Belt | Click on a planet, label, or bottom bar chip |
 | Reset Overview | Escape key or Reset View button |
 | Toggle Fullscreen | F key or Fullscreen button |
+| Toggle Cosmic Audio | M key or Audio button |
 | Surface Sky View | V key or Surface View button / drawer action |
 | Toggle Belts | B key or Belts button |
 | Toggle AU Grid | G key or Grid button |
@@ -58,6 +60,7 @@ The simulation models the Sun, the eight major planets, major natural satellites
 - `index.html`: Main page layout, Three.js import map, and HUD overlay.
 - `css/main.css`: Styling for the interface, HUD panels, and responsive layout.
 - `js/engine.js`: Three.js scene setup, camera transitions, lighting, and animation loop.
+- `js/audio.js`: Procedural Web Audio API synthesizer for cosmic drones and planetary plasma waves.
 - `js/physics.js`: Keplerian orbit math, date conversions, and planetary positioning.
 - `js/config.js`: Astronomical constants, orbital elements, physical dimensions, and telemetry stats.
 - `js/ui.js`: DOM event handling, speed controls, telemetry drawer, and HUD updates.

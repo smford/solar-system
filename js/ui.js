@@ -27,6 +27,7 @@ export class UIController {
     this.bodyQuickBar = document.getElementById('body-quick-bar');
     this.resetViewBtn = document.getElementById('btn-reset-view');
     this.btnFullscreen = document.getElementById('btn-fullscreen');
+    this.btnToggleAudio = document.getElementById('btn-toggle-audio');
     this.toggleUiBtn = document.getElementById('btn-toggle-ui');
 
     // Surface View HUD Banner Elements
@@ -73,6 +74,11 @@ export class UIController {
       this.updateSurfaceBannerUI(isActive, bodyId);
       this.updateTelemetrySurfaceBtnUI(isActive, bodyId);
     };
+    if (this.engine.audio) {
+      this.engine.audio.onStateChange = (enabled) => {
+        this.updateAudioButtonUI(enabled);
+      };
+    }
 
     // Start UI update loop for epoch timer
     this.startEpochUpdater();
@@ -287,6 +293,14 @@ export class UIController {
       });
     }
 
+    // Toggle Cosmic Audio Button
+    if (this.btnToggleAudio) {
+      this.btnToggleAudio.addEventListener('click', async () => {
+        const enabled = await this.engine.toggleAudio();
+        this.updateAudioButtonUI(enabled);
+      });
+    }
+
     // Native Fullscreen Change Listeners
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
       document.addEventListener(evt, () => {
@@ -322,6 +336,15 @@ export class UIController {
     if ((e.code === 'KeyF' || e.key === 'f' || e.key === 'F') && !isInput) {
       e.preventDefault();
       this.toggleFullscreen();
+      return;
+    }
+
+    // Toggle Cosmic Audio with 'M' key
+    if ((e.code === 'KeyM' || e.key === 'm' || e.key === 'M') && !isInput) {
+      e.preventDefault();
+      this.engine.toggleAudio().then((enabled) => {
+        this.updateAudioButtonUI(enabled);
+      });
       return;
     }
 
@@ -626,6 +649,36 @@ export class UIController {
     this.btnSurfaceView.classList.toggle('active', active);
     this.btnSurfaceView.classList.toggle('surface-off', !active);
     this.btnSurfaceView.title = active ? 'Exit Planetarium Surface Sky View (V)' : 'Toggle Planetarium Surface Sky View (V)';
+  }
+
+  updateAudioButtonUI(enabled) {
+    if (!this.btnToggleAudio) return;
+    const label = this.btnToggleAudio.querySelector('.toggle-audio-label');
+    if (label) {
+      label.textContent = enabled ? 'AUDIO: ON' : 'AUDIO: OFF';
+    }
+    this.btnToggleAudio.classList.toggle('active', !!enabled);
+    this.btnToggleAudio.classList.toggle('audio-off', !enabled);
+    this.btnToggleAudio.title = enabled ? 'Mute Cosmic Audio (M)' : 'Toggle Cosmic Audio (M)';
+
+    const iconSvg = this.btnToggleAudio.querySelector('svg');
+    if (iconSvg) {
+      if (enabled) {
+        // Speaker with soundwaves icon for Audio ON
+        iconSvg.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        `;
+      } else {
+        // Speaker with diagonal mute slash for Audio OFF
+        iconSvg.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <line x1="23" y1="9" x2="17" y2="15"/>
+          <line x1="17" y1="9" x2="23" y2="15"/>
+        `;
+      }
+    }
   }
 
   updateSurfaceBannerUI(active, bodyId) {
