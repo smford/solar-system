@@ -57,6 +57,11 @@ export class SimulationEngine {
     this.initStarfield();
     this.initPlanetMarkers();
     this.initEvents();
+
+    // Expose THREE on window for developer console inspection
+    if (typeof window !== 'undefined') {
+      window.THREE = THREE;
+    }
   }
 
   initScene() {
@@ -197,6 +202,12 @@ export class SimulationEngine {
         this.skyMesh.material.map = tex;
         this.skyMesh.material.needsUpdate = true;
       }
+      if (key.includes('Rings')) {
+        const bodyKey = key.replace('Rings', '');
+        if (this.bodies[bodyKey]?.shadowUniforms) {
+          this.bodies[bodyKey].shadowUniforms.uRingTexture.value = tex;
+        }
+      }
     });
 
     // 1. Build Sun
@@ -307,11 +318,14 @@ export class SimulationEngine {
       }
     }
 
-    // Saturn / Uranus Rings
+    // Saturn / Uranus Rings & Realistic Solar Shadows
     let ringMesh = null;
+    let shadowUniforms = null;
     if (config.hasRings) {
+      haloMesh.visible = false;
       ringMesh = this.buildRings(key, config);
       mesh.add(ringMesh); // Added directly to mesh so it scales and tilts automatically
+      shadowUniforms = this.setupRingShadows(key, mesh, ringMesh, config);
     }
 
     // Vector Planetary Orbit Line (vivid, anti-aliased, and clearly drawn)
@@ -330,6 +344,7 @@ export class SimulationEngine {
       moonMesh,
       moons: moonsList,
       ringMesh,
+      shadowUniforms,
       config
     };
   }
@@ -434,6 +449,131 @@ export class SimulationEngine {
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
     ringMesh.rotation.x = Math.PI / 2;
     return ringMesh;
+  }
+
+  /**
+   * Set up photorealistic solar shadow casting for planetary ring systems:
+   * 1. Planet globe casts an authentic elliptical dark shadow across its rings
+   * 2. Rings cast an authentic shadow band across the planet's cloud tops
+   */
+  setupRingShadows(key, bodyMesh, ringMesh, config) {
+    const ringCfg = config.ringConfig;
+    const inner = ringCfg.innerRadiusMultiplier;
+    const outer = ringCfg.outerRadiusMultiplier;
+    const ringTex = ringMesh.material.map || this.textures[`${key}Rings`] || this.textures.saturnRings;
+
+    const shadowUniforms = {
+      uSunDirLocal: { value: new THREE.Vector3(1, 0, 0) },
+      uRingTexture: { value: ringTex },
+      uRingInner: { value: inner },
+      uRingOuter: { value: outer }
+    };
+
+    // 1. Globe Material: Rings cast shadow onto planet atmosphere
+    bodyMesh.material.onBeforeCompile = (shader) => {
+      shader.uniforms.uSunDirLocal = shadowUniforms.uSunDirLocal;
+      shader.uniforms.uRingTexture = shadowUniforms.uRingTexture;
+      shader.uniforms.uRingInner = shadowUniforms.uRingInner;
+      shader.uniforms.uRingOuter = shadowUniforms.uRingOuter;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vPlanetLocalPos;`
+      );
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        vPlanetLocalPos = position;`
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vPlanetLocalPos;
+        uniform vec3 uSunDirLocal;
+        uniform sampler2D uRingTexture;
+        uniform float uRingInner;
+        uniform float uRingOuter;`
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <lights_fragment_end>',
+        `#include <lights_fragment_end>
+        // Realistic solar shadow of rings cast onto the planet atmosphere
+        float ringShadowFactor = 1.0;
+        if (abs(uSunDirLocal.y) > 0.0005) {
+          // Ray from surface point towards the Sun: P + t * L.
+          // Intersects ring equatorial plane y = 0 at t = -P.y / L.y
+          float tRing = -vPlanetLocalPos.y / uSunDirLocal.y;
+          // Shadow is cast if ray crosses the ring plane between the surface and the Sun
+          if (tRing > 0.0 && dot(vPlanetLocalPos, uSunDirLocal) > -0.05) {
+            vec3 pHit = vPlanetLocalPos + tRing * uSunDirLocal;
+            float rHit = length(pHit.xz);
+            if (rHit >= uRingInner && rHit <= uRingOuter) {
+              float uCoord = clamp((rHit - uRingInner) / (uRingOuter - uRingInner), 0.0, 1.0);
+              vec4 ringSample = texture2D(uRingTexture, vec2(uCoord, 0.5));
+              float opticalDensity = ringSample.a;
+              float edgeSoftness = 0.02;
+              float edgeBlend = smoothstep(uRingInner, uRingInner + edgeSoftness, rHit) *
+                                (1.0 - smoothstep(uRingOuter - edgeSoftness, uRingOuter, rHit));
+              float shadowBlock = clamp(opticalDensity * edgeBlend * 0.82, 0.0, 0.88);
+              ringShadowFactor = 1.0 - shadowBlock;
+            }
+          }
+        }
+        reflectedLight.directDiffuse *= ringShadowFactor;
+        reflectedLight.directSpecular *= ringShadowFactor;`
+      );
+    };
+    bodyMesh.material.customProgramCacheKey = () => `${key}_globe_shadow`;
+
+    // 2. Ring Material: Planet globe casts shadow across rings
+    ringMesh.material.onBeforeCompile = (shader) => {
+      shader.uniforms.uSunDirLocal = shadowUniforms.uSunDirLocal;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vRingEquatorialPos;`
+      );
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        // Ring mesh is rotated PI/2 around X, so in planet equatorial local coordinates: (x, 0, y)
+        vRingEquatorialPos = vec3(position.x, 0.0, position.y);`
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vRingEquatorialPos;
+        uniform vec3 uSunDirLocal;`
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <lights_fragment_end>',
+        `#include <lights_fragment_end>
+        // Realistic solar shadow of planet globe cast onto its ring plane
+        float globeShadowFactor = 1.0;
+        float projSun = dot(vRingEquatorialPos, uSunDirLocal);
+        // Fragment is behind the globe relative to the Sun (night side)
+        if (projSun < 0.0) {
+          float dPerpSq = dot(vRingEquatorialPos, vRingEquatorialPos) - projSun * projSun;
+          float dPerp = sqrt(max(0.0, dPerpSq));
+          // Planet globe radius is 1.0 in local mesh coordinates
+          float penumbra = 0.035;
+          float tShadow = smoothstep(1.0 - penumbra, 1.0 + penumbra, dPerp);
+          globeShadowFactor = mix(0.04, 1.0, tShadow);
+        }
+        reflectedLight.directDiffuse *= globeShadowFactor;
+        reflectedLight.directSpecular *= globeShadowFactor;
+        reflectedLight.indirectDiffuse *= mix(0.35, 1.0, globeShadowFactor);`
+      );
+    };
+    ringMesh.material.customProgramCacheKey = () => `${key}_ring_shadow`;
+
+    return shadowUniforms;
   }
 
   /**
@@ -1169,6 +1309,14 @@ export class SimulationEngine {
       // Clouds rotation on Earth
       if (body.cloudsMesh) {
         body.cloudsMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 1.15;
+      }
+
+      // Update solar shadow projection for ring systems
+      if (body.ringMesh && body.shadowUniforms) {
+        body.mesh.updateWorldMatrix(true, false);
+        const sunWorld = new THREE.Vector3(0, 0, 0);
+        const sunLocal = body.mesh.worldToLocal(sunWorld);
+        body.shadowUniforms.uSunDirLocal.value.copy(sunLocal).normalize();
       }
 
       // Moon position and orbit line relative to Earth (legacy fallback)
