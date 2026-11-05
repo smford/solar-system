@@ -52,13 +52,14 @@ export class SimulationEngine {
   initScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x020204);
-    this.scene.fog = new THREE.FogExp2(0x020204, 0.00018);
+    // Note: No fog in vacuum of space. Prevents dimming/darkening when zooming out.
+    this.scene.fog = null;
 
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
 
-    // Camera initialized to zoomed-out view showing all planetary orbits out to Neptune
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 30000);
+    // Camera initialized to panoramic view showing all planetary orbits out to Neptune
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 40000);
     this.camera.position.set(APP_CONFIG.defaultCameraPos.x, APP_CONFIG.defaultCameraPos.y, APP_CONFIG.defaultCameraPos.z);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -68,38 +69,39 @@ export class SimulationEngine {
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.toneMappingExposure = 1.25;
     this.container.appendChild(this.renderer.domElement);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.06;
-    this.controls.minDistance = 3.0;
-    this.controls.maxDistance = 15000;
+    this.controls.minDistance = 2.0;
+    this.controls.maxDistance = 25000;
     this.controls.maxPolarAngle = Math.PI * 0.88; // Don't flip under
   }
 
   initLighting() {
-    // Primary central point light emitted from Sun
-    this.sunLight = new THREE.PointLight(0xfff8ee, 4.2, 0, 0.035);
+    // Primary central point light emitted from Sun (infinite range, no falloff attenuation)
+    this.sunLight = new THREE.PointLight(0xffffff, 5.0, 0, 0.0);
     this.sunLight.position.set(0, 0, 0);
     this.scene.add(this.sunLight);
 
-    // Deep-space subtle ambient fill so dark sides of planets remain distinct and readable
-    const ambientLight = new THREE.AmbientLight(0x182030, 0.55);
+    // Deep-space ambient fill so dark sides of planets remain distinct and readable from high orbit
+    const ambientLight = new THREE.AmbientLight(0x334155, 0.85);
     this.scene.add(ambientLight);
   }
 
   initStarfield() {
     // 1. Deep space celestial background sphere with NASA Milky Way panorama
     if (this.textures && this.textures.milkyway) {
-      const skyGeo = new THREE.SphereGeometry(7500, 32, 32);
+      const skyGeo = new THREE.SphereGeometry(16000, 32, 32);
       const skyMat = new THREE.MeshBasicMaterial({
         map: this.textures.milkyway,
         side: THREE.BackSide,
         transparent: true,
-        opacity: 0.42,
-        depthWrite: false
+        opacity: 0.38,
+        depthWrite: false,
+        fog: false
       });
       this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
       this.scene.add(this.skyMesh);
@@ -120,7 +122,7 @@ export class SimulationEngine {
     ];
 
     for (let i = 0; i < starCount; i++) {
-      const radius = 2800 + Math.random() * 4500;
+      const radius = 3200 + Math.random() * 5500;
       const theta = 2 * Math.PI * Math.random();
       const phi = Math.acos(2 * Math.random() - 1);
 
@@ -160,7 +162,8 @@ export class SimulationEngine {
       map: starTexture,
       transparent: true,
       blending: THREE.AdditiveBlending,
-      depthWrite: false
+      depthWrite: false,
+      fog: false
     });
 
     const stars = new THREE.Points(geometry, material);
@@ -194,40 +197,73 @@ export class SimulationEngine {
     group.name = 'sun_group';
 
     // Core emissive sphere with NASA SDO realistic photo texture
-    const sphereGeo = new THREE.SphereGeometry(radius, 64, 64);
+    // Unit geometry (radius 1) so scaling by radius sets the exact intended physical size
+    const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
     const sphereMat = new THREE.MeshBasicMaterial({
       map: this.textures.sun,
-      color: 0xfff6dd
+      color: 0xffffff,
+      fog: false
     });
     const coreMesh = new THREE.Mesh(sphereGeo, sphereMat);
+    coreMesh.scale.set(radius, radius, radius);
     coreMesh.userData = { bodyId: 'sun' };
     group.add(coreMesh);
 
     // Inner Coronal Glow
-    const innerGlowGeo = new THREE.SphereGeometry(radius * 1.08, 48, 48);
+    const innerGlowGeo = new THREE.SphereGeometry(1.12, 48, 48);
     const innerGlowMat = new THREE.MeshBasicMaterial({
-      color: 0xffaa22,
+      color: 0xffb733,
       transparent: true,
       opacity: 0.38,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
-      depthWrite: false
+      depthWrite: false,
+      fog: false
     });
     const innerGlow = new THREE.Mesh(innerGlowGeo, innerGlowMat);
+    innerGlow.scale.set(radius, radius, radius);
     group.add(innerGlow);
 
     // Outer Coronal Atmosphere Haze
-    const outerGlowGeo = new THREE.SphereGeometry(radius * 1.25, 48, 48);
+    const outerGlowGeo = new THREE.SphereGeometry(1.3, 48, 48);
     const outerGlowMat = new THREE.MeshBasicMaterial({
-      color: 0xff6600,
+      color: 0xff7700,
       transparent: true,
       opacity: 0.18,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
-      depthWrite: false
+      depthWrite: false,
+      fog: false
     });
     const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
+    outerGlow.scale.set(radius, radius, radius);
     group.add(outerGlow);
+
+    // Radiant Solar Flare Sprite (maintains brilliant solar visibility at any zoom level)
+    const sunGlowCanvas = document.createElement('canvas');
+    sunGlowCanvas.width = 128;
+    sunGlowCanvas.height = 128;
+    const gCtx = sunGlowCanvas.getContext('2d');
+    const sunGrad = gCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    sunGrad.addColorStop(0, 'rgba(255, 235, 180, 0.95)');
+    sunGrad.addColorStop(0.2, 'rgba(255, 180, 60, 0.6)');
+    sunGrad.addColorStop(0.5, 'rgba(255, 110, 20, 0.2)');
+    sunGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    gCtx.fillStyle = sunGrad;
+    gCtx.fillRect(0, 0, 128, 128);
+
+    const sunGlowTex = new THREE.CanvasTexture(sunGlowCanvas);
+    const sunSpriteMat = new THREE.SpriteMaterial({
+      map: sunGlowTex,
+      color: 0xffeedd,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false
+    });
+    const sunSprite = new THREE.Sprite(sunSpriteMat);
+    sunSprite.scale.set(radius * 3.8, radius * 3.8, 1);
+    group.add(sunSprite);
 
     this.scene.add(group);
     this.bodies['sun'] = {
@@ -235,6 +271,7 @@ export class SimulationEngine {
       mesh: coreMesh,
       innerGlow,
       outerGlow,
+      sunSprite,
       config
     };
   }
@@ -246,7 +283,7 @@ export class SimulationEngine {
     const { radius } = this.physics.getBodyDimensions(key);
 
     // Planet body mesh with realistic NASA surface texture
-    const sphereGeo = new THREE.SphereGeometry(1, 64, 64); // Scaled dynamically in update
+    const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshStandardMaterial({
       map: this.textures[key],
       roughness: key === 'earth' ? 0.38 : (key === 'venus' ? 0.85 : 0.72),
@@ -302,8 +339,9 @@ export class SimulationEngine {
       const moonOrbitMat = new THREE.LineBasicMaterial({
         color: 0x90a4ae,
         transparent: true,
-        opacity: 0.35,
-        depthWrite: false
+        opacity: 0.45,
+        depthWrite: false,
+        fog: false
       });
       this.moonOrbitLine = new THREE.LineLoop(moonOrbitGeo, moonOrbitMat);
       this.scene.add(this.moonOrbitLine);
@@ -316,7 +354,7 @@ export class SimulationEngine {
       mesh.add(ringMesh); // Added directly to mesh so it scales and tilts automatically
     }
 
-    // Vector Planetary Orbit Line (clearly drawn and visible)
+    // Vector Planetary Orbit Line (prominent and clearly drawn)
     const orbitLine = this.buildOrbitLine(key, config);
     this.scene.add(orbitLine);
     this.orbitLines[key] = orbitLine;
@@ -384,8 +422,9 @@ export class SimulationEngine {
     const material = new THREE.LineBasicMaterial({
       color: new THREE.Color(config.orbitColor || 0x666666),
       transparent: true,
-      opacity: 0.48, // Clearly visible across entire solar system
-      depthWrite: false
+      opacity: 0.65, // Vivid and clearly visible across entire solar system
+      depthWrite: false,
+      fog: false
     });
 
     const line = new THREE.LineLoop(geometry, material);
@@ -469,7 +508,7 @@ export class SimulationEngine {
     // Reset previous hovered line
     if (this.hoveredBodyId && this.orbitLines[this.hoveredBodyId]) {
       const isSelected = this.selectedBodyId === this.hoveredBodyId;
-      this.orbitLines[this.hoveredBodyId].material.opacity = isSelected ? 0.95 : 0.48;
+      this.orbitLines[this.hoveredBodyId].material.opacity = isSelected ? 1.0 : 0.65;
       this.orbitLines[this.hoveredBodyId].material.color.set(isSelected ? 0xffffff : (this.bodies[this.hoveredBodyId].config.orbitColor || 0x666666));
     }
 
@@ -517,7 +556,7 @@ export class SimulationEngine {
 
     // Reset previous selected orbit line
     if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
-      this.orbitLines[this.selectedBodyId].material.opacity = 0.48;
+      this.orbitLines[this.selectedBodyId].material.opacity = 0.65;
       this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
     }
 
@@ -525,7 +564,7 @@ export class SimulationEngine {
 
     // Highlight selected body orbit
     if (this.orbitLines[bodyId]) {
-      this.orbitLines[bodyId].material.opacity = 0.95;
+      this.orbitLines[bodyId].material.opacity = 1.0;
       this.orbitLines[bodyId].material.color.set(0xffffff);
     }
 
@@ -553,7 +592,7 @@ export class SimulationEngine {
    */
   resetCameraView() {
     if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
-      this.orbitLines[this.selectedBodyId].material.opacity = 0.48;
+      this.orbitLines[this.selectedBodyId].material.opacity = 0.65;
       this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
     }
 
@@ -634,24 +673,33 @@ export class SimulationEngine {
     // 2. Update dynamic orbit line geometry if scale changed
     this.updateOrbitLines();
 
-    // 3. Update planetary positions, axial spins, and dynamic scales
+    // 3. Keep background celestial sphere centered on camera so it never clips or obscures
+    if (this.skyMesh) {
+      this.skyMesh.position.copy(this.camera.position);
+    }
+
+    // 4. Update planetary positions, axial spins, and dynamic scales
     for (const [key, body] of Object.entries(this.bodies)) {
       const { radius } = this.physics.getBodyDimensions(key);
 
-      // Dynamic scale update for Exploration vs True scale transition
-      body.mesh.scale.set(radius, radius, radius);
-
       if (key === 'sun') {
-        // Sun dynamic coronal pulse
+        // Sun dynamic coronal pulse and radiant lens flare
         const pulse = 1.0 + Math.sin(now * 0.002) * 0.02;
-        body.innerGlow.scale.set(pulse, pulse, pulse);
+        body.innerGlow.scale.set(radius * 1.12 * pulse, radius * 1.12 * pulse, radius * 1.12 * pulse);
         const outerPulse = 1.0 + Math.cos(now * 0.0015) * 0.035;
-        body.outerGlow.scale.set(outerPulse, outerPulse, outerPulse);
+        body.outerGlow.scale.set(radius * 1.3 * outerPulse, radius * 1.3 * outerPulse, radius * 1.3 * outerPulse);
+        body.mesh.scale.set(radius, radius, radius);
+        if (body.sunSprite) {
+          body.sunSprite.scale.set(radius * 3.8 * pulse, radius * 3.8 * pulse, 1);
+        }
 
         // Sun axial spin
         body.mesh.rotation.y = this.physics.calculateAxialRotation('sun');
         continue;
       }
+
+      // Dynamic scale update for planet mesh
+      body.mesh.scale.set(radius, radius, radius);
 
       // Orbital position
       const pos = this.physics.calculatePosition(key);
@@ -677,7 +725,7 @@ export class SimulationEngine {
       }
     }
 
-    // 4. Camera target tracking if a body is selected
+    // 5. Camera target tracking if a body is selected
     if (this.selectedBodyId && !this.isTransitioningCamera) {
       const targetBody = this.bodies[this.selectedBodyId];
       if (targetBody) {
@@ -689,10 +737,10 @@ export class SimulationEngine {
       }
     }
 
-    // 5. Camera transition interpolation
+    // 6. Camera transition interpolation
     this.updateCameraTween(deltaSeconds);
 
-    // 6. Update orbit controls and render
+    // 7. Update orbit controls and render
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }

@@ -12,13 +12,13 @@ export const CELESTIAL_BODIES = {
     emissive: '#ff7700',
     // Exploration scale parameters
     exploration: {
-      radius: 12.0,
+      radius: 7.5,
       orbitDistance: 0,
       rotationPeriod: 27.0 // Earth days
     },
     // True relative astronomical scale (scaled for visual range where 1 AU = 120 units)
     trueScale: {
-      radius: 10.9, // Scaled down relative to true 109x to prevent obscuring inner solar system
+      radius: 8.5,
       orbitDistance: 0,
       rotationPeriod: 27.0
     },
@@ -42,10 +42,10 @@ export const CELESTIAL_BODIES = {
     id: 'mercury',
     name: 'Mercury',
     type: 'Terrestrial Planet',
-    color: '#9e9a93',
+    color: '#cbd5e1',
     exploration: {
-      radius: 1.2,
-      orbitDistance: 26,
+      radius: 1.4,
+      orbitDistance: 28,
       orbitPeriod: 87.97, // Earth days
       rotationPeriod: 58.65 // Earth days
     },
@@ -57,7 +57,7 @@ export const CELESTIAL_BODIES = {
     },
     eccentricity: 0.2056,
     axialTilt: 0.034,
-    orbitColor: '#b4afaa',
+    orbitColor: '#cbd5e1',
     telemetry: {
       diameter: '4,879 km',
       relativeSize: '0.383 × Earth',
@@ -76,10 +76,10 @@ export const CELESTIAL_BODIES = {
     id: 'venus',
     name: 'Venus',
     type: 'Terrestrial Planet',
-    color: '#e3bb76',
+    color: '#fde047',
     exploration: {
-      radius: 2.1,
-      orbitDistance: 38,
+      radius: 2.2,
+      orbitDistance: 42,
       orbitPeriod: 224.7,
       rotationPeriod: -243.02 // Retrograde rotation
     },
@@ -91,7 +91,7 @@ export const CELESTIAL_BODIES = {
     },
     eccentricity: 0.0067,
     axialTilt: 177.36,
-    orbitColor: '#ebc382',
+    orbitColor: '#fde047',
     telemetry: {
       diameter: '12,104 km',
       relativeSize: '0.949 × Earth',
@@ -110,10 +110,10 @@ export const CELESTIAL_BODIES = {
     id: 'earth',
     name: 'Earth',
     type: 'Terrestrial (Habitable)',
-    color: '#4b75a1',
+    color: '#60a5fa',
     exploration: {
-      radius: 2.4,
-      orbitDistance: 54,
+      radius: 2.5,
+      orbitDistance: 58,
       orbitPeriod: 365.256,
       rotationPeriod: 1.0 // 24 hours
     },
@@ -125,16 +125,16 @@ export const CELESTIAL_BODIES = {
     },
     eccentricity: 0.0167,
     axialTilt: 23.44,
-    orbitColor: '#5aa0eb',
+    orbitColor: '#60a5fa',
     hasClouds: true,
     hasMoon: true,
     moon: {
       name: 'Moon (Luna)',
-      radiusMultiplier: 0.27,
-      orbitDistance: 4.8,
+      radiusMultiplier: 0.28,
+      orbitDistance: 5.0,
       orbitPeriod: 27.32,
       rotationPeriod: 27.32,
-      color: '#b0b3b8'
+      color: '#cbd5e1'
     },
     telemetry: {
       diameter: '12,742 km',
@@ -154,10 +154,10 @@ export const CELESTIAL_BODIES = {
     id: 'mars',
     name: 'Mars',
     type: 'Terrestrial Planet',
-    color: '#c1440e',
+    color: '#fb923c',
     exploration: {
-      radius: 1.6,
-      orbitDistance: 72,
+      radius: 1.8,
+      orbitDistance: 76,
       orbitPeriod: 686.98,
       rotationPeriod: 1.026
     },
@@ -169,7 +169,7 @@ export const CELESTIAL_BODIES = {
     },
     eccentricity: 0.0934,
     axialTilt: 25.19,
-    orbitColor: '#d75f2d',
+    orbitColor: '#fb923c',
     telemetry: {
       diameter: '6,779 km',
       relativeSize: '0.532 × Earth',
@@ -188,22 +188,22 @@ export const CELESTIAL_BODIES = {
     id: 'jupiter',
     name: 'Jupiter',
     type: 'Gas Giant',
-    color: '#d39c63',
+    color: '#fcd34d',
     exploration: {
       radius: 6.8,
-      orbitDistance: 104,
+      orbitDistance: 114,
       orbitPeriod: 4332.59, // 11.86 Earth years
       rotationPeriod: 0.414 // 9.92 hours
     },
     trueScale: {
-      radius: 3.5, // Amplified relative to astronomical 11.2x for balanced viewability
+      radius: 3.5,
       orbitDistance: 624.0, // 5.20 AU * 120
       orbitPeriod: 4332.59,
       rotationPeriod: 0.414
     },
     eccentricity: 0.0484,
     axialTilt: 3.13,
-    orbitColor: '#d7a56e',
+    orbitColor: '#fcd34d',
     telemetry: {
       diameter: '139,820 km',
       relativeSize: '10.97 × Earth',
@@ -222,10 +222,10 @@ export const CELESTIAL_BODIES = {
     id: 'saturn',
     name: 'Saturn',
     type: 'Gas Giant (Ring System)',
-    color: '#e4cd99',
+    color: '#fef08a',
     exploration: {
-      radius: 5.6,
-      orbitDistance: 142,
+      radius: 5.8,
+      orbitDistance: 156,
       orbitPeriod: 10759.22, // 29.46 Earth years
       rotationPeriod: 0.444 // 10.66 hours
     },
@@ -242,7 +242,7 @@ export const CELESTIAL_BODIES = {
       innerRadiusMultiplier: 1.25,
       outerRadiusMultiplier: 2.35
     },
-    orbitColor: '#e6d2a0',
+    orbitColor: '#fef08a',
     telemetry: {
       diameter: '116,460 km (Equatorial)',
       relativeSize: '9.14 × Earth',
@@ -261,10 +261,10 @@ export const CELESTIAL_BODIES = {
     id: 'uranus',
     name: 'Uranus',
     type: 'Ice Giant',
-    color: '#70b7ba',
+    color: '#6ee7b7',
     exploration: {
-      radius: 3.6,
-      orbitDistance: 180,
+      radius: 3.8,
+      orbitDistance: 200,
       orbitPeriod: 30685.4, // 84.0 Earth years
       rotationPeriod: -0.718 // Retrograde, 17.24 hours
     },
@@ -282,7 +282,7 @@ export const CELESTIAL_BODIES = {
       outerRadiusMultiplier: 1.75,
       subtle: true
     },
-    orbitColor: '#6ec3c8',
+    orbitColor: '#6ee7b7',
     telemetry: {
       diameter: '50,724 km',
       relativeSize: '3.98 × Earth',
@@ -301,10 +301,10 @@ export const CELESTIAL_BODIES = {
     id: 'neptune',
     name: 'Neptune',
     type: 'Ice Giant',
-    color: '#274687',
+    color: '#93c5fd',
     exploration: {
-      radius: 3.5,
-      orbitDistance: 218,
+      radius: 3.7,
+      orbitDistance: 245,
       orbitPeriod: 60189.0, // 164.8 Earth years
       rotationPeriod: 0.671 // 16.11 hours
     },
@@ -316,7 +316,7 @@ export const CELESTIAL_BODIES = {
     },
     eccentricity: 0.0086,
     axialTilt: 28.32,
-    orbitColor: '#4178e6',
+    orbitColor: '#93c5fd',
     telemetry: {
       diameter: '49,244 km',
       relativeSize: '3.86 × Earth',
@@ -345,8 +345,8 @@ export const TIME_PRESETS = [
 
 export const APP_CONFIG = {
   defaultScaleMode: 'exploration', // 'exploration' | 'trueScale'
-  baseTimeScaleDaysPerSecond: 10.0, // At 1x multiplier, 10 earth days pass per second for smooth dynamic viewing
+  baseTimeScaleDaysPerSecond: 10.0,
   starfieldCount: 4500,
-  defaultCameraPos: { x: 0, y: 390, z: 470 },
+  defaultCameraPos: { x: 0, y: 380, z: 460 },
   defaultCameraTarget: { x: 0, y: 0, z: 0 }
 };
