@@ -1,12 +1,12 @@
 /**
  * HELIOS 3D Graphics & Simulation Engine
- * Three.js scene, procedural shaders, lighting, starfield, meshes, and render loop.
+ * Three.js scene, NASA photographic textures, lighting, starfield, meshes, orbits, and render loop.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CELESTIAL_BODIES, APP_CONFIG } from './config.js';
 import { PhysicsEngine } from './physics.js';
-import { TextureGenerator } from './textures.js';
+import { TextureManager } from './textures.js';
 
 export class SimulationEngine {
   constructor(canvasContainer) {
@@ -15,6 +15,7 @@ export class SimulationEngine {
 
     this.bodies = {};
     this.orbitLines = {};
+    this.moonOrbitLine = null;
     this.hoveredBodyId = null;
     this.selectedBodyId = null;
 
@@ -43,20 +44,21 @@ export class SimulationEngine {
 
     this.initScene();
     this.initLighting();
-    this.initStarfield();
     this.initCelestialBodies();
+    this.initStarfield();
     this.initEvents();
   }
 
   initScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x030306);
-    this.scene.fog = new THREE.FogExp2(0x030306, 0.00035);
+    this.scene.background = new THREE.Color(0x020204);
+    this.scene.fog = new THREE.FogExp2(0x020204, 0.00018);
 
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
 
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 15000);
+    // Camera initialized to zoomed-out view showing all planetary orbits out to Neptune
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 30000);
     this.camera.position.set(APP_CONFIG.defaultCameraPos.x, APP_CONFIG.defaultCameraPos.y, APP_CONFIG.defaultCameraPos.z);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -66,29 +68,44 @@ export class SimulationEngine {
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.2;
     this.container.appendChild(this.renderer.domElement);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.06;
     this.controls.minDistance = 3.0;
-    this.controls.maxDistance = 6000;
+    this.controls.maxDistance = 15000;
     this.controls.maxPolarAngle = Math.PI * 0.88; // Don't flip under
   }
 
   initLighting() {
     // Primary central point light emitted from Sun
-    this.sunLight = new THREE.PointLight(0xfff6ea, 3.8, 0, 0.04);
+    this.sunLight = new THREE.PointLight(0xfff8ee, 4.2, 0, 0.035);
     this.sunLight.position.set(0, 0, 0);
     this.scene.add(this.sunLight);
 
-    // Deep-space subtle ambient fill so dark sides remain crisp and visible
-    const ambientLight = new THREE.AmbientLight(0x1a2133, 0.45);
+    // Deep-space subtle ambient fill so dark sides of planets remain distinct and readable
+    const ambientLight = new THREE.AmbientLight(0x182030, 0.55);
     this.scene.add(ambientLight);
   }
 
   initStarfield() {
+    // 1. Deep space celestial background sphere with NASA Milky Way panorama
+    if (this.textures && this.textures.milkyway) {
+      const skyGeo = new THREE.SphereGeometry(7500, 32, 32);
+      const skyMat = new THREE.MeshBasicMaterial({
+        map: this.textures.milkyway,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false
+      });
+      this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
+      this.scene.add(this.skyMesh);
+    }
+
+    // 2. High-precision 3D starfield particles
     const starCount = APP_CONFIG.starfieldCount;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(starCount * 3);
@@ -103,8 +120,7 @@ export class SimulationEngine {
     ];
 
     for (let i = 0; i < starCount; i++) {
-      // Spherical distribution around deep space
-      const radius = 2500 + Math.random() * 3500;
+      const radius = 2800 + Math.random() * 4500;
       const theta = 2 * Math.PI * Math.random();
       const phi = Math.acos(2 * Math.random() - 1);
 
@@ -152,20 +168,13 @@ export class SimulationEngine {
   }
 
   initCelestialBodies() {
-    this.textures = {
-      sun: TextureGenerator.createSunTexture(),
-      mercury: TextureGenerator.createMercuryTexture(),
-      venus: TextureGenerator.createVenusTexture(),
-      earth: TextureGenerator.createEarthTexture(),
-      earthClouds: TextureGenerator.createEarthCloudsTexture(),
-      moon: TextureGenerator.createMoonTexture(),
-      mars: TextureGenerator.createMarsTexture(),
-      jupiter: TextureGenerator.createJupiterTexture(),
-      saturn: TextureGenerator.createSaturnTexture(),
-      saturnRings: TextureGenerator.createSaturnRingTexture(),
-      uranus: TextureGenerator.createUranusTexture(),
-      neptune: TextureGenerator.createNeptuneTexture()
-    };
+    // Load realistic NASA photographic textures with automatic procedural fallbacks
+    this.textures = TextureManager.loadAllTextures((key, tex) => {
+      if (key === 'milkyway' && this.skyMesh) {
+        this.skyMesh.material.map = tex;
+        this.skyMesh.material.needsUpdate = true;
+      }
+    });
 
     // 1. Build Sun
     this.buildSun();
@@ -184,11 +193,11 @@ export class SimulationEngine {
     const group = new THREE.Group();
     group.name = 'sun_group';
 
-    // Core emissive sphere
+    // Core emissive sphere with NASA SDO realistic photo texture
     const sphereGeo = new THREE.SphereGeometry(radius, 64, 64);
     const sphereMat = new THREE.MeshBasicMaterial({
       map: this.textures.sun,
-      color: 0xfff3d0
+      color: 0xfff6dd
     });
     const coreMesh = new THREE.Mesh(sphereGeo, sphereMat);
     coreMesh.userData = { bodyId: 'sun' };
@@ -199,7 +208,7 @@ export class SimulationEngine {
     const innerGlowMat = new THREE.MeshBasicMaterial({
       color: 0xffaa22,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.38,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
       depthWrite: false
@@ -212,7 +221,7 @@ export class SimulationEngine {
     const outerGlowMat = new THREE.MeshBasicMaterial({
       color: 0xff6600,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.18,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
       depthWrite: false
@@ -236,12 +245,12 @@ export class SimulationEngine {
 
     const { radius } = this.physics.getBodyDimensions(key);
 
-    // Planet body mesh
-    const sphereGeo = new THREE.SphereGeometry(1, 48, 48); // Scaled dynamically in update
+    // Planet body mesh with realistic NASA surface texture
+    const sphereGeo = new THREE.SphereGeometry(1, 64, 64); // Scaled dynamically in update
     const material = new THREE.MeshStandardMaterial({
       map: this.textures[key],
-      roughness: 0.72,
-      metalness: 0.08
+      roughness: key === 'earth' ? 0.38 : (key === 'venus' ? 0.85 : 0.72),
+      metalness: 0.05
     });
 
     const mesh = new THREE.Mesh(sphereGeo, material);
@@ -250,17 +259,17 @@ export class SimulationEngine {
     mesh.userData = { bodyId: key };
     group.add(mesh);
 
-    // Earth specific: Atmosphere cloud layer & Moon
+    // Earth specific: Atmospheric cloud layer & Moon
     let cloudsMesh = null;
     let moonGroup = null;
     let moonMesh = null;
 
     if (key === 'earth') {
-      const cloudGeo = new THREE.SphereGeometry(1.025, 48, 48);
+      const cloudGeo = new THREE.SphereGeometry(1.025, 64, 64);
       const cloudMat = new THREE.MeshStandardMaterial({
         map: this.textures.earthClouds,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.72,
         blending: THREE.AdditiveBlending,
         roughness: 1.0,
         depthWrite: false
@@ -268,29 +277,46 @@ export class SimulationEngine {
       cloudsMesh = new THREE.Mesh(cloudGeo, cloudMat);
       mesh.add(cloudsMesh);
 
-      // Moon
+      // Moon with realistic NASA Lunar Reconnaissance Orbiter texture
       moonGroup = new THREE.Group();
       moonGroup.name = 'moon_group';
-      const moonGeo = new THREE.SphereGeometry(radius * config.moon.radiusMultiplier, 24, 24);
+      const moonGeo = new THREE.SphereGeometry(radius * config.moon.radiusMultiplier, 32, 32);
       const moonMat = new THREE.MeshStandardMaterial({
         map: this.textures.moon,
-        roughness: 0.85,
+        roughness: 0.88,
         metalness: 0.05
       });
       moonMesh = new THREE.Mesh(moonGeo, moonMat);
       moonMesh.userData = { bodyId: 'moon', parentId: 'earth' };
       moonGroup.add(moonMesh);
       this.scene.add(moonGroup);
+
+      // Moon orbital path around Earth
+      const moonOrbitPts = [];
+      const mDist = config.moon.orbitDistance;
+      for (let i = 0; i <= 64; i++) {
+        const a = (i / 64) * Math.PI * 2;
+        moonOrbitPts.push(new THREE.Vector3(mDist * Math.cos(a), 0, mDist * Math.sin(a)));
+      }
+      const moonOrbitGeo = new THREE.BufferGeometry().setFromPoints(moonOrbitPts);
+      const moonOrbitMat = new THREE.LineBasicMaterial({
+        color: 0x90a4ae,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false
+      });
+      this.moonOrbitLine = new THREE.LineLoop(moonOrbitGeo, moonOrbitMat);
+      this.scene.add(this.moonOrbitLine);
     }
 
     // Saturn / Uranus Rings
     let ringMesh = null;
     if (config.hasRings) {
-      ringMesh = this.buildRings(key, config, radius);
-      group.add(ringMesh);
+      ringMesh = this.buildRings(key, config);
+      mesh.add(ringMesh); // Added directly to mesh so it scales and tilts automatically
     }
 
-    // Vector Orbit Line
+    // Vector Planetary Orbit Line (clearly drawn and visible)
     const orbitLine = this.buildOrbitLine(key, config);
     this.scene.add(orbitLine);
     this.orbitLines[key] = orbitLine;
@@ -308,13 +334,13 @@ export class SimulationEngine {
     };
   }
 
-  buildRings(key, config, radius) {
+  buildRings(key, config) {
     const ringCfg = config.ringConfig;
-    const inner = radius * ringCfg.innerRadiusMultiplier;
-    const outer = radius * ringCfg.outerRadiusMultiplier;
+    const inner = ringCfg.innerRadiusMultiplier;
+    const outer = ringCfg.outerRadiusMultiplier;
 
-    // Use custom mapped RingGeometry
-    const ringGeo = new THREE.RingGeometry(inner, outer, 64);
+    // Use custom mapped RingGeometry with 96 segments for high circular fidelity
+    const ringGeo = new THREE.RingGeometry(inner, outer, 96);
     
     // Remap UVs so radius maps from 0 to 1 along U
     const pos = ringGeo.attributes.position;
@@ -331,18 +357,20 @@ export class SimulationEngine {
       map: this.textures[`${key}Rings`] || this.textures.saturnRings,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: ringCfg.subtle ? 0.35 : 0.88,
-      roughness: 0.6
+      opacity: ringCfg.subtle ? 0.4 : 0.95,
+      roughness: 0.55
     });
 
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
     ringMesh.rotation.x = Math.PI / 2;
-    ringMesh.rotation.y = THREE.MathUtils.degToRad(config.axialTilt || 0);
     return ringMesh;
   }
 
+  /**
+   * Draw crisp, clearly visible vector orbit lines for each planet
+   */
   buildOrbitLine(key, config) {
-    const pathPoints = this.physics.generateOrbitPath(key);
+    const pathPoints = this.physics.generateOrbitPath(key, 256);
     const positions = new Float32Array(pathPoints.length * 3);
     for (let i = 0; i < pathPoints.length; i++) {
       positions[i * 3] = pathPoints[i].x;
@@ -356,8 +384,8 @@ export class SimulationEngine {
     const material = new THREE.LineBasicMaterial({
       color: new THREE.Color(config.orbitColor || 0x666666),
       transparent: true,
-      opacity: 0.28,
-      linewidth: 1
+      opacity: 0.48, // Clearly visible across entire solar system
+      depthWrite: false
     });
 
     const line = new THREE.LineLoop(geometry, material);
@@ -367,7 +395,7 @@ export class SimulationEngine {
 
   updateOrbitLines() {
     for (const [key, line] of Object.entries(this.orbitLines)) {
-      const pathPoints = this.physics.generateOrbitPath(key);
+      const pathPoints = this.physics.generateOrbitPath(key, 256);
       const positions = line.geometry.attributes.position.array;
       for (let i = 0; i < pathPoints.length; i++) {
         positions[i * 3] = pathPoints[i].x;
@@ -440,15 +468,16 @@ export class SimulationEngine {
   setHoveredBody(bodyId) {
     // Reset previous hovered line
     if (this.hoveredBodyId && this.orbitLines[this.hoveredBodyId]) {
-      this.orbitLines[this.hoveredBodyId].material.opacity = 0.28;
-      this.orbitLines[this.hoveredBodyId].material.color.set(this.bodies[this.hoveredBodyId].config.orbitColor || 0x666666);
+      const isSelected = this.selectedBodyId === this.hoveredBodyId;
+      this.orbitLines[this.hoveredBodyId].material.opacity = isSelected ? 0.95 : 0.48;
+      this.orbitLines[this.hoveredBodyId].material.color.set(isSelected ? 0xffffff : (this.bodies[this.hoveredBodyId].config.orbitColor || 0x666666));
     }
 
     this.hoveredBodyId = bodyId;
 
     // Highlight new hovered line
     if (bodyId && this.orbitLines[bodyId]) {
-      this.orbitLines[bodyId].material.opacity = 0.95;
+      this.orbitLines[bodyId].material.opacity = 1.0;
       this.orbitLines[bodyId].material.color.set(0xffffff);
     }
 
@@ -486,7 +515,19 @@ export class SimulationEngine {
   focusBody(bodyId) {
     if (!this.bodies[bodyId]) return;
 
+    // Reset previous selected orbit line
+    if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
+      this.orbitLines[this.selectedBodyId].material.opacity = 0.48;
+      this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
+    }
+
     this.selectedBodyId = bodyId;
+
+    // Highlight selected body orbit
+    if (this.orbitLines[bodyId]) {
+      this.orbitLines[bodyId].material.opacity = 0.95;
+      this.orbitLines[bodyId].material.color.set(0xffffff);
+    }
 
     const body = this.bodies[bodyId];
     const targetPos = body.group.position.clone();
@@ -508,9 +549,14 @@ export class SimulationEngine {
   }
 
   /**
-   * Reset camera to solar top-down / isometric perspective
+   * Reset camera to zoomed-out solar top-down / isometric perspective
    */
   resetCameraView() {
+    if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
+      this.orbitLines[this.selectedBodyId].material.opacity = 0.48;
+      this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
+    }
+
     this.selectedBodyId = null;
 
     const defaultTarget = new THREE.Vector3(
@@ -520,7 +566,7 @@ export class SimulationEngine {
     );
 
     const t = this.physics.getEffectiveScaleInterpolation();
-    const scaleFactor = 1.0 + t * 4.5;
+    const scaleFactor = 1.0 + t * 6.5;
     const defaultCamera = new THREE.Vector3(
       APP_CONFIG.defaultCameraPos.x * scaleFactor,
       APP_CONFIG.defaultCameraPos.y * scaleFactor,
@@ -596,7 +642,7 @@ export class SimulationEngine {
       body.mesh.scale.set(radius, radius, radius);
 
       if (key === 'sun') {
-        // Sun subtle dynamic coronal pulse
+        // Sun dynamic coronal pulse
         const pulse = 1.0 + Math.sin(now * 0.002) * 0.02;
         body.innerGlow.scale.set(pulse, pulse, pulse);
         const outerPulse = 1.0 + Math.cos(now * 0.0015) * 0.035;
@@ -619,11 +665,15 @@ export class SimulationEngine {
         body.cloudsMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 1.15;
       }
 
-      // Moon position relative to Earth
+      // Moon position and orbit line relative to Earth
       if (body.moonGroup && body.config.moon) {
         const moonPos = this.physics.calculateMoonPosition(pos, body.config.moon);
         body.moonGroup.position.set(moonPos.x, moonPos.y, moonPos.z);
         body.moonMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 0.3;
+
+        if (this.moonOrbitLine) {
+          this.moonOrbitLine.position.set(pos.x, pos.y, pos.z);
+        }
       }
     }
 

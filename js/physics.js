@@ -149,7 +149,7 @@ export class PhysicsEngine {
   /**
    * Generate vector orbit points for Line geometry
    */
-  generateOrbitPath(bodyId, segments = 128) {
+  generateOrbitPath(bodyId, segments = 256) {
     const config = this.bodies[bodyId];
     if (!config || bodyId === 'sun') return [];
 

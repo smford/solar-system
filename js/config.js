@@ -347,6 +347,6 @@ export const APP_CONFIG = {
   defaultScaleMode: 'exploration', // 'exploration' | 'trueScale'
   baseTimeScaleDaysPerSecond: 10.0, // At 1x multiplier, 10 earth days pass per second for smooth dynamic viewing
   starfieldCount: 4500,
-  defaultCameraPos: { x: 0, y: 190, z: 270 },
+  defaultCameraPos: { x: 0, y: 390, z: 470 },
   defaultCameraTarget: { x: 0, y: 0, z: 0 }
 };

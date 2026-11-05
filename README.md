@@ -1,15 +1,33 @@
 # HELIOS // 3D Solar System Dynamics & Telemetry
 
-A minimalist, high-precision 3D Solar System simulation web application powered by Three.js and Keplerian orbital mechanics. Built as a zero-build, vanilla ES module application deployed automatically to GitHub Pages.
+A minimalist, high-precision 3D Solar System simulation web application powered by Three.js, Keplerian orbital mechanics, and realistic NASA photographic imagery. Built as a zero-build, vanilla ES module application deployed automatically to GitHub Pages.
+
+🌐 **Live Application**: [https://stephenford.org/solar-system/](https://stephenford.org/solar-system/)
+
+---
 
 ## ✨ Features
 
-- **Keplerian Orbital Physics**: Real-time orbital mechanics taking into account semi-major axes, orbital periods, orbital eccentricities, and axial rotations.
+- **Realistic NASA Photographic Textures**: High-resolution equirectangular texture maps derived from NASA, JPL, USGS, and Solar System Scope data:
+  - **Sun**: NASA Solar Dynamics Observatory (SDO) solar granulations and active regions.
+  - **Mercury**: NASA MESSENGER orbital mosaic.
+  - **Venus**: NASA Pioneer Venus / Akatsuki atmospheric cloud layer.
+  - **Earth**: NASA Earth Observatory "Blue Marble" elevation and ocean surface map.
+  - **Earth Clouds**: Dynamic rotating atmospheric cloud layer.
+  - **Moon**: NASA Lunar Reconnaissance Orbiter (LRO) mosaic + Earth orbital path.
+  - **Mars**: NASA Mars Global Surveyor (MGS) & Viking mosaic with polar caps.
+  - **Jupiter**: NASA Cassini / Juno spacecraft mosaic with the Great Red Spot.
+  - **Saturn & Rings**: NASA Cassini atmosphere mosaic + high-resolution Cassini ring transmission alpha map (with authentic Cassini Division).
+  - **Uranus & Neptune**: NASA Voyager 2 spacecraft imagery.
+  - **Milky Way**: NASA / ESO deep space panorama backdrop.
+  - **Procedural Fallback**: Offline-resilient procedural canvas texture generator if network access is restricted.
+- **Full Solar System Zoomed-out Perspective**: Initial camera view is framed to present the entire solar system (from the Sun out through Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, to Neptune's orbit) immediately on load.
+- **Clearly Drawn Planetary Orbits**: Anti-aliased 256-segment vector orbit paths with distinct spectral accent colors and dynamic hover/selection brightening.
+- **Keplerian Orbital Mechanics**: Real-time orbital transforms accounting for semi-major axes, orbital periods, orbital eccentricities, and sidereal axial rotations.
 - **Scale Mode Toggle**:
   - **Exploration Scale** (Default): Logarithmically compressed distances with amplified planetary radii for clear viewing and exploration.
-  - **True Relative Orbit Scale**: Demonstrates true interplanetary scale and the vast expanse of the solar system.
-- **Procedural Surface Generation**: 100% canvas-generated procedural textures for the Sun, terrestrial planets, gas giants, ice giants, Moon, and Saturn's rings (zero external image assets or HTTP 404s).
-- **Interactive Observatory Telemetry**:
+  - **True Relative Orbit Scale**: Demonstrates true interplanetary scale and the vast emptiness of the solar system.
+- **Interactive Telemetry HUD**:
   - Click any celestial body or quick-chip to smoothly tween the camera into tracking orbit.
   - Real-world telemetry drawer: Equatorial diameter, scale vs Earth, mass, surface gravity, surface temperature, mean distance, and natural satellites.
 - **Simulation Time Controls**:
@@ -17,9 +35,8 @@ A minimalist, high-precision 3D Solar System simulation web application powered 
   - Continuous logarithmic warp slider.
   - Play / Pause toggle with keyboard shortcut (`Space`).
 - **Aerospace Vector Aesthetic**:
-  - High-end dark observatory HUD with glassmorphism (`#030306`).
-  - Subtle vector orbit paths that highlight on hover.
-  - Procedural 3D starfield with stellar classification color temperatures.
+  - High-end dark observatory HUD with glassmorphism (`#020204`).
+  - 4,500-star temperature-tinted 3D starfield.
 
 ## 🕹️ Controls
 
@@ -28,7 +45,7 @@ A minimalist, high-precision 3D Solar System simulation web application powered 
 | **Rotate Orbit** | Left Click + Drag |
 | **Pan Camera** | Right Click + Drag / Two-finger Drag |
 | **Zoom In / Out** | Mouse Wheel / Pinch Gesture |
-| **Select / Focus Planet** | Click Body or Select from Bottom Dock |
+| **Select / Focus Planet** | Click Celestial Body or Select from Bottom Dock |
 | **Play / Pause** | Spacebar or Pause Button |
 | **Reset Solar Overview** | `Esc` or Reset View Button |
 
@@ -38,10 +55,15 @@ A minimalist, high-precision 3D Solar System simulation web application powered 
 - `css/main.css`: Aerospace telemetry HUD, glassmorphism, responsive design.
 - `js/config.js`: Astronomical constants, orbital parameters, physical properties, telemetry metadata.
 - `js/physics.js`: Keplerian trajectories, scale interpolation, coordinate transforms.
-- `js/textures.js`: Procedural canvas surface and ring generator.
+- `js/textures.js`: NASA photo texture loader with procedural canvas fallback engine.
 - `js/engine.js`: Three.js scene, lighting, camera tweening, raycasting, render loop.
 - `js/ui.js`: Telemetry drawer, time dock, event handlers.
+- `assets/textures/`: NASA/JPL/USGS/Solar System Scope photographic textures.
 - `.github/workflows/deploy.yml`: Automated GitHub Pages OIDC CI/CD deployment.
+
+## 📜 Credits & Imagery Attribution
+
+- **Planetary Imagery & Textures**: Derived from public-domain datasets by [NASA](https://www.nasa.gov/), [NASA Jet Propulsion Laboratory (JPL)](https://www.jpl.nasa.gov/), and the [United States Geological Survey (USGS)](https://www.usgs.gov/), with cartographic composite projections distributed under CC-BY 4.0 by [Solar System Scope](https://www.solarsystemscope.com/textures/).
 
 ## 🚀 Local Development
 

@@ -506,3 +506,65 @@ export class TextureGenerator {
     return texture;
   }
 }
+
+export class TextureManager {
+  static loadAllTextures(onProgress, onError) {
+    const loader = new THREE.TextureLoader();
+
+    const paths = {
+      sun: 'assets/textures/sun.jpg',
+      mercury: 'assets/textures/mercury.jpg',
+      venus: 'assets/textures/venus.jpg',
+      earth: 'assets/textures/earth.jpg',
+      earthClouds: 'assets/textures/earth_clouds.jpg',
+      moon: 'assets/textures/moon.jpg',
+      mars: 'assets/textures/mars.jpg',
+      jupiter: 'assets/textures/jupiter.jpg',
+      saturn: 'assets/textures/saturn.jpg',
+      saturnRings: 'assets/textures/saturn_ring.png',
+      uranus: 'assets/textures/uranus.jpg',
+      neptune: 'assets/textures/neptune.jpg',
+      milkyway: 'assets/textures/milkyway.jpg'
+    };
+
+    const fallbacks = {
+      sun: () => TextureGenerator.createSunTexture(),
+      mercury: () => TextureGenerator.createMercuryTexture(),
+      venus: () => TextureGenerator.createVenusTexture(),
+      earth: () => TextureGenerator.createEarthTexture(),
+      earthClouds: () => TextureGenerator.createEarthCloudsTexture(),
+      moon: () => TextureGenerator.createMoonTexture(),
+      mars: () => TextureGenerator.createMarsTexture(),
+      jupiter: () => TextureGenerator.createJupiterTexture(),
+      saturn: () => TextureGenerator.createSaturnTexture(),
+      saturnRings: () => TextureGenerator.createSaturnRingTexture(),
+      uranus: () => TextureGenerator.createUranusTexture(),
+      neptune: () => TextureGenerator.createNeptuneTexture(),
+      milkyway: () => null
+    };
+
+    const textures = {};
+
+    for (const [key, path] of Object.entries(paths)) {
+      textures[key] = loader.load(
+        path,
+        (loadedTex) => {
+          loadedTex.colorSpace = THREE.SRGBColorSpace;
+          loadedTex.needsUpdate = true;
+          if (onProgress) onProgress(key, loadedTex);
+        },
+        undefined,
+        (err) => {
+          console.warn(`NASA texture ${path} not loaded. Using procedural fallback.`);
+          if (fallbacks[key]) {
+            textures[key] = fallbacks[key]();
+          }
+          if (onError) onError(key, err);
+        }
+      );
+      textures[key].colorSpace = THREE.SRGBColorSpace;
+    }
+
+    return textures;
+  }
+}
