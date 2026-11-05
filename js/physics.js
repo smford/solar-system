@@ -94,6 +94,13 @@ export class PhysicsEngine {
   }
 
   /**
+   * Set simulation epoch date (alias for setDate)
+   */
+  setEpochDate(date) {
+    this.setDate(date);
+  }
+
+  /**
    * Jump simulation epoch to real-world current date/time
    */
   setCurrentDate() {

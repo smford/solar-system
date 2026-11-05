@@ -765,6 +765,172 @@ export const AU_GRID_CONFIG = [
 ];
 
 /**
+ * Curated Landmark Historical Astronomical Events & Spaceflight Milestones
+ */
+export const HISTORICAL_EVENTS = [
+  {
+    id: 'apollo-11',
+    name: 'Apollo 11 Lunar Landing',
+    date: '1969-07-20',
+    target: 'moon',
+    category: 'Spaceflight Milestone',
+    spacecraft: 'Apollo 11 (LM-5 Eagle)',
+    description: 'First human landing on another celestial body at Mare Tranquillitatis.',
+    significance: 'Neil Armstrong and Buzz Aldrin become the first humans to walk on the lunar surface, completing humanity\'s inaugural landing on another celestial world.',
+    telemetry: {
+      eventDate: 'July 20, 1969 (20:17:40 UTC)',
+      targetBody: 'The Moon (Mare Tranquillitatis)',
+      spacecraft: 'Apollo 11 LM-5 (Eagle)',
+      crew: 'Neil Armstrong, Buzz Aldrin, Michael Collins',
+      coordinates: '0.67408° N, 23.47297° E',
+      surfaceDuration: '21 hours, 36 minutes',
+      significance: 'First human landing on another celestial body at Mare Tranquillitatis.'
+    }
+  },
+  {
+    id: 'voyager-2-neptune',
+    name: 'Voyager 2 Neptune Flyby',
+    date: '1989-08-25',
+    target: 'neptune',
+    category: 'Spaceflight Milestone',
+    spacecraft: 'Voyager 2',
+    description: 'Historic flyby of Neptune and geyser discovery on moon Triton.',
+    significance: 'Voyager 2 completed humanity\'s only close encounter with the ice giant Neptune, revealing 6 new moons, 4 rings, and active cryogenic nitrogen geysers on Triton.',
+    telemetry: {
+      eventDate: 'August 25, 1989 (03:56 UTC)',
+      targetBody: 'Neptune & Triton',
+      spacecraft: 'Voyager 2',
+      flybyDistance: '4,951 km above northern cloud deck',
+      discoveries: 'Triton nitrogen geysers, Great Dark Spot, 6 moons',
+      heliocentricDistance: '29.2 AU from the Sun',
+      significance: 'Historic flyby of Neptune and geyser discovery on moon Triton.'
+    }
+  },
+  {
+    id: 'cassini-saturn',
+    name: 'Cassini Saturn Orbit Insertion',
+    date: '2004-07-01',
+    target: 'saturn',
+    category: 'Spaceflight Milestone',
+    spacecraft: 'Cassini-Huygens',
+    description: 'Cassini-Huygens passes through the ring gap to begin a 13-year tour of the Saturnian system.',
+    significance: 'First spacecraft to enter orbit around Saturn after an epic 7-year interplanetary trek, flying between Saturn\'s F and G rings.',
+    telemetry: {
+      eventDate: 'July 1, 2004 (02:48 UTC)',
+      targetBody: 'Saturnian System & Ring Plane',
+      spacecraft: 'Cassini-Huygens Orbiter & Huygens Probe',
+      mainEngineBurn: '96 minutes (delta-V: 626 m/s)',
+      tourDuration: '13 years (294 orbits, Grand Finale Sept 2017)',
+      majorDiscoveries: 'Enceladus hydrothermal vents, Titan liquid methane lakes',
+      significance: 'Cassini-Huygens passes through the ring gap to begin a 13-year tour of the Saturnian system.'
+    }
+  },
+  {
+    id: 'voyager-1-heliopause',
+    name: 'Voyager 1 Interstellar Crossing',
+    date: '2012-08-25',
+    target: 'sun',
+    category: 'Spaceflight Milestone',
+    spacecraft: 'Voyager 1',
+    description: 'First human artifact to cross the heliopause into interstellar space (~121 AU).',
+    significance: 'Voyager 1 breached the outer heliospheric boundary into the interstellar medium at ~121.6 AU, becoming humanity\'s first interstellar probe.',
+    telemetry: {
+      eventDate: 'August 25, 2012',
+      targetBody: 'Outer Heliosphere / Interstellar Frontier',
+      spacecraft: 'Voyager 1',
+      distanceFromSun: '121.6 AU (18.2 billion km)',
+      boundary: 'Heliopause (solar wind transition to ISM)',
+      velocity: '17.0 km/s relative to Sun (~3.6 AU/year)',
+      significance: 'First human artifact to cross the heliopause into interstellar space (~121 AU).'
+    }
+  },
+  {
+    id: 'new-horizons-pluto',
+    name: 'New Horizons Pluto Encounter',
+    date: '2015-07-14',
+    target: 'kuiperBelt',
+    category: 'Spaceflight Milestone',
+    spacecraft: 'New Horizons',
+    description: 'First reconnaissance of Pluto and entry into the outer Kuiper Belt debris disc.',
+    significance: 'High-speed flyby within 12,500 km of Pluto at 13.8 km/s, unveiling Tombaugh Regio\'s nitrogen glacier plains and venturing into the classical Kuiper Belt.',
+    telemetry: {
+      eventDate: 'July 14, 2015 (11:49 UTC)',
+      targetBody: 'Pluto & Kuiper Belt Frontier',
+      spacecraft: 'New Horizons',
+      flybyDistance: '12,500 km from Pluto surface',
+      flybyVelocity: '13.78 km/s relative to Pluto',
+      solarDistance: '32.9 AU (4.9 billion km)',
+      significance: 'First reconnaissance of Pluto and entry into the outer Kuiper Belt debris disc.'
+    }
+  },
+  {
+    id: 'great-conjunction-2020',
+    name: 'Great Conjunction of Jupiter & Saturn',
+    date: '2020-12-21',
+    target: 'jupiter',
+    category: 'Astronomical Alignment',
+    spacecraft: 'Earth-Based & Space Observatories',
+    description: 'Closest apparent planetary alignment of Jupiter and Saturn since 1623 (0.1 degree separation).',
+    significance: 'Jupiter and Saturn appeared separated by only 6.1 arcminutes (0.1°), allowing both giant planets and their major moons to be viewed simultaneously in a single high-power eyepiece.',
+    telemetry: {
+      eventDate: 'December 21, 2020 (18:20 UTC)',
+      targetBody: 'Jupiter & Saturn Heliocentric Arc',
+      angularSeparation: '0.10° (6.1 arcminutes)',
+      historicalInterval: 'Closest apparent conjunction since 1623 (397 years)',
+      jupiterDistance: '5.92 AU from Earth',
+      saturnDistance: '10.82 AU from Earth',
+      significance: 'Closest apparent planetary alignment of Jupiter and Saturn since 1623 (0.1 degree separation).'
+    }
+  },
+  {
+    id: 'perseverance-landing',
+    name: 'Mars Perseverance Rover Landing',
+    date: '2021-02-18',
+    target: 'mars',
+    category: 'Spaceflight Milestone',
+    spacecraft: 'Mars 2020 (Perseverance & Ingenuity)',
+    description: 'Touchdown at Jezero Crater to search for ancient biosignatures.',
+    significance: 'Precision Sky Crane touchdown inside Jezero Crater\'s ancient river delta to collect core samples and deploy Ingenuity, the first aircraft on another planet.',
+    telemetry: {
+      eventDate: 'February 18, 2021 (20:55 UTC)',
+      targetBody: 'Mars (Jezero Crater Delta)',
+      spacecraft: 'Perseverance Rover & Ingenuity Helicopter',
+      landingSite: 'Jezero Crater (Octavia E. Butler Landing)',
+      coordinates: '18.38° N, 77.58° E',
+      landingMethod: 'Terrain Relative Navigation & Sky Crane',
+      significance: 'Touchdown at Jezero Crater to search for ancient biosignatures.'
+    }
+  },
+  {
+    id: 'total-solar-eclipse-2024',
+    name: 'North American Total Solar Eclipse',
+    date: '2024-04-08',
+    target: 'earth',
+    category: 'Astronomical Alignment',
+    spacecraft: 'Sun-Moon-Earth Syzygy',
+    description: 'Syzygy alignment where the Moon casts its umbral shadow across North America.',
+    significance: 'The Moon aligned perfectly between Sun and Earth during solar maximum, casting an umbral shadow path spanning Mexico, 15 US States, and Eastern Canada.',
+    telemetry: {
+      eventDate: 'April 8, 2024 (18:17 UTC)',
+      targetBody: 'Earth (North American Umbra)',
+      totalityDuration: '4 minutes, 28 seconds (maximum)',
+      shadowPathWidth: '185 km across continental North America',
+      alignmentType: 'Sun-Moon-Earth Syzygy Alignment',
+      solarCyclePhase: 'Solar Maximum (prominences & corona visible)',
+      significance: 'Syzygy alignment where the Moon casts its umbral shadow across North America.'
+    }
+  }
+];
+
+/**
+ * Helper to locate a curated historical event by id
+ */
+export function findHistoricalEventById(eventId) {
+  if (!eventId) return null;
+  return HISTORICAL_EVENTS.find(e => e.id === eventId) || null;
+}
+
+/**
  * Helper to locate an asteroid belt by id
  */
 export function findBeltById(beltId) {

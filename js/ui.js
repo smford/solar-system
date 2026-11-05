@@ -2,7 +2,7 @@
  * HELIOS User Interface & Telemetry HUD Controller
  * Minimalist dark glassmorphic control dock, side telemetry drawer, timeline scrubbers, and selectors.
  */
-import { CELESTIAL_BODIES, TIME_PRESETS, findMoonById, ASTEROID_BELTS, findBeltById } from './config.js';
+import { CELESTIAL_BODIES, TIME_PRESETS, findMoonById, ASTEROID_BELTS, findBeltById, HISTORICAL_EVENTS, findHistoricalEventById } from './config.js';
 
 export class UIController {
   constructor(engine) {
@@ -13,6 +13,7 @@ export class UIController {
     this.epochDatePicker = document.getElementById('epoch-date-picker');
     this.epochTodayBtn = document.getElementById('btn-epoch-today');
     this.epochElapsed = document.getElementById('epoch-elapsed');
+    this.historicalEventsSelect = document.getElementById('historical-events-select');
     this.fpsDisplay = document.getElementById('fps-display');
     this.playPauseBtn = document.getElementById('btn-play-pause');
     this.reverseBtn = document.getElementById('btn-reverse');
@@ -40,6 +41,7 @@ export class UIController {
     this.currentSpeedMagnitude = 1.0;
     this.isReversed = false;
     this.isUiHidden = false;
+    this.activeHistoricalEvent = null;
 
     this.init();
   }
@@ -47,7 +49,9 @@ export class UIController {
   init() {
     this.buildWarpPresets();
     this.buildBodyQuickBar();
+    this.buildHistoricalEventsSelect();
     this.bindEvents();
+    this.bindHistoricalEvents();
 
     // Hook engine callbacks
     this.engine.onSelectBody = (bodyId) => this.handleBodySelected(bodyId);
@@ -201,6 +205,10 @@ export class UIController {
     // Reset View
     if (this.resetViewBtn) {
       this.resetViewBtn.addEventListener('click', () => {
+        this.activeHistoricalEvent = null;
+        if (this.historicalEventsSelect) {
+          this.historicalEventsSelect.value = '';
+        }
         this.engine.resetCameraView();
       });
     }
@@ -208,6 +216,10 @@ export class UIController {
     // Telemetry Drawer Close
     if (this.telemetryCloseBtn) {
       this.telemetryCloseBtn.addEventListener('click', () => {
+        this.activeHistoricalEvent = null;
+        if (this.historicalEventsSelect) {
+          this.historicalEventsSelect.value = '';
+        }
         this.engine.resetCameraView();
       });
     }
@@ -216,6 +228,10 @@ export class UIController {
     if (this.epochDatePicker) {
       this.epochDatePicker.addEventListener('change', (e) => {
         if (e.target.value) {
+          this.activeHistoricalEvent = null;
+          if (this.historicalEventsSelect) {
+            this.historicalEventsSelect.value = '';
+          }
           this.engine.physics.setDate(e.target.value);
         }
       });
@@ -226,6 +242,10 @@ export class UIController {
 
     if (this.epochTodayBtn) {
       this.epochTodayBtn.addEventListener('click', () => {
+        this.activeHistoricalEvent = null;
+        if (this.historicalEventsSelect) {
+          this.historicalEventsSelect.value = '';
+        }
         this.engine.physics.setCurrentDate();
         if (this.epochDatePicker) {
           const nowStr = this.engine.physics.getSimulatedDate().toISOString().split('T')[0];
@@ -243,25 +263,27 @@ export class UIController {
 
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
-      // Toggle UI visibility with 'H' key (when not typing in an input)
-      if ((e.key === 'h' || e.key === 'H') && e.target.tagName !== 'INPUT') {
+      const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT';
+
+      // Toggle UI visibility with 'H' key (when not typing in an input/select)
+      if ((e.key === 'h' || e.key === 'H') && !isInput) {
         this.toggleUIVisibility();
       }
 
       // Toggle Asteroid Belts visibility with 'B' key
-      if ((e.key === 'b' || e.key === 'B') && e.target.tagName !== 'INPUT') {
+      if ((e.key === 'b' || e.key === 'B') && !isInput) {
         const visible = this.engine.toggleBelts();
         this.updateBeltsButtonUI(visible);
       }
 
       // Toggle Astronomical Distance Grid visibility with 'G' key
-      if ((e.key === 'g' || e.key === 'G') && e.target.tagName !== 'INPUT') {
+      if ((e.key === 'g' || e.key === 'G') && !isInput) {
         const visible = this.engine.toggleGrid();
         this.updateGridButtonUI(visible);
       }
 
       // Space for Play/Pause
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      if (e.code === 'Space' && !isInput) {
         e.preventDefault();
         const currentlyPaused = this.engine.physics.isPaused;
         if (currentlyPaused) {
@@ -277,6 +299,94 @@ export class UIController {
         }
       }
     });
+  }
+
+  buildHistoricalEventsSelect() {
+    if (!this.historicalEventsSelect) return;
+    this.historicalEventsSelect.innerHTML = '';
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'HISTORICAL EVENTS & FLYBYS...';
+    this.historicalEventsSelect.appendChild(defaultOpt);
+
+    // Group events cleanly by category
+    const categories = {};
+    for (const event of HISTORICAL_EVENTS) {
+      const cat = event.category || 'Curated Events';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(event);
+    }
+
+    for (const [categoryName, events] of Object.entries(categories)) {
+      const group = document.createElement('optgroup');
+      group.label = categoryName.toUpperCase();
+
+      for (const ev of events) {
+        const opt = document.createElement('option');
+        opt.value = ev.id;
+        opt.textContent = `${ev.name} (${ev.date})`;
+        group.appendChild(opt);
+      }
+      this.historicalEventsSelect.appendChild(group);
+    }
+  }
+
+  bindHistoricalEvents() {
+    if (!this.historicalEventsSelect) return;
+
+    this.historicalEventsSelect.addEventListener('change', (e) => {
+      const eventId = e.target.value;
+      if (!eventId) {
+        this.activeHistoricalEvent = null;
+        return;
+      }
+      this.triggerHistoricalEvent(eventId);
+    });
+
+    this.historicalEventsSelect.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  triggerHistoricalEvent(eventId) {
+    const event = findHistoricalEventById(eventId);
+    if (!event) return;
+
+    this.activeHistoricalEvent = event;
+
+    // 1. Update simulation date
+    if (typeof this.engine.setSimulationDate === 'function') {
+      this.engine.setSimulationDate(event.date);
+    } else if (this.engine.physics?.setEpochDate) {
+      this.engine.physics.setEpochDate(event.date);
+    } else {
+      this.engine.physics.setDate(event.date);
+    }
+
+    // 2. Synchronize epoch date picker & elapsed counter immediately
+    this.syncEpochUI();
+
+    // 3. Smoothly focus the camera on the target body
+    this.engine.focusBody(event.target);
+
+    // 4. Open telemetry drawer with curated historical event details
+    this.openHistoricalEventTelemetry(event);
+  }
+
+  syncEpochUI() {
+    const date = this.engine.physics.getSimulatedDate();
+    const dateStr = date.toISOString().split('T')[0];
+    const elapsed = this.engine.physics.elapsedDays;
+    const sign = elapsed >= 0 ? '+' : '-';
+    const absDays = Math.abs(elapsed).toFixed(1);
+
+    if (this.epochDatePicker) {
+      this.epochDatePicker.value = dateStr;
+    }
+    if (this.epochElapsed) {
+      this.epochElapsed.textContent = `(T${sign} ${absDays}d)`;
+    }
   }
 
   /**
@@ -398,11 +508,24 @@ export class UIController {
     });
 
     if (!bodyId) {
+      this.activeHistoricalEvent = null;
+      if (this.historicalEventsSelect) {
+        this.historicalEventsSelect.value = '';
+      }
       this.closeTelemetry();
       return;
     }
 
-    this.openTelemetry(bodyId);
+    // If body selection matches active historical event target, open historical telemetry
+    if (this.activeHistoricalEvent && (this.activeHistoricalEvent.target === bodyId || (moon && this.activeHistoricalEvent.target === moon.id))) {
+      this.openHistoricalEventTelemetry(this.activeHistoricalEvent);
+    } else {
+      this.activeHistoricalEvent = null;
+      if (this.historicalEventsSelect) {
+        this.historicalEventsSelect.value = '';
+      }
+      this.openTelemetry(bodyId);
+    }
   }
 
   openTelemetry(bodyId) {
@@ -450,6 +573,99 @@ export class UIController {
     this.telemetryDrawer.classList.add('open');
   }
 
+  openHistoricalEventTelemetry(event) {
+    if (!this.telemetryDrawer || !event) return;
+
+    this.telemetryTitle.textContent = event.name.toUpperCase();
+    this.telemetryType.textContent = (event.category || 'HISTORICAL EVENT').toUpperCase();
+
+    this.telemetryStats.innerHTML = '';
+
+    // Meta Badge (Epoch Date & Category)
+    const badgeRow = document.createElement('div');
+    badgeRow.className = 'telemetry-event-badge';
+    badgeRow.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span>EPOCH: ${event.date}</span>
+    `;
+    this.telemetryStats.appendChild(badgeRow);
+
+    // Event Description
+    if (event.description) {
+      const descEl = document.createElement('div');
+      descEl.className = 'telemetry-description';
+      descEl.style.padding = '0.65rem 0 0.85rem 0';
+      descEl.style.fontSize = '0.84rem';
+      descEl.style.color = '#cbd5e1';
+      descEl.style.lineHeight = '1.5';
+      descEl.style.borderBottom = '1px solid rgba(255, 255, 255, 0.08)';
+      descEl.textContent = event.description;
+      this.telemetryStats.appendChild(descEl);
+    }
+
+    // Historical Significance Callout
+    if (event.significance) {
+      const sigEl = document.createElement('div');
+      sigEl.className = 'telemetry-event-significance';
+      sigEl.innerHTML = `
+        <div style="font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: #facc15; letter-spacing: 0.08em; margin-bottom: 4px;">HISTORICAL SIGNIFICANCE</div>
+        <div style="color: #fef08a; font-size: 0.82rem; line-height: 1.45;">${event.significance}</div>
+      `;
+      this.telemetryStats.appendChild(sigEl);
+    }
+
+    // Spacecraft / Mission Row
+    if (event.spacecraft) {
+      const craftRow = document.createElement('div');
+      craftRow.className = 'telemetry-row';
+      craftRow.innerHTML = `
+        <div class="telemetry-label">SPACECRAFT / MISSION</div>
+        <div class="telemetry-value">${event.spacecraft}</div>
+      `;
+      this.telemetryStats.appendChild(craftRow);
+    }
+
+    // Target Celestial Body Row
+    const targetBodyConfig = CELESTIAL_BODIES[event.target] || findMoonById(event.target) || findBeltById(event.target);
+    const targetName = targetBodyConfig ? targetBodyConfig.name : (event.target.charAt(0).toUpperCase() + event.target.slice(1));
+    const targetRow = document.createElement('div');
+    targetRow.className = 'telemetry-row';
+    targetRow.innerHTML = `
+      <div class="telemetry-label">TARGET CELESTIAL BODY</div>
+      <div class="telemetry-value">${targetName}</div>
+    `;
+    this.telemetryStats.appendChild(targetRow);
+
+    // Detailed Telemetry Rows
+    if (event.telemetry) {
+      for (const [key, value] of Object.entries(event.telemetry)) {
+        if (key === 'significance' && event.significance) continue;
+
+        const row = document.createElement('div');
+        row.className = 'telemetry-row';
+
+        const label = document.createElement('div');
+        label.className = 'telemetry-label';
+        label.textContent = this.formatTelemetryKey(key);
+
+        const val = document.createElement('div');
+        val.className = 'telemetry-value';
+        val.textContent = value;
+
+        row.appendChild(label);
+        row.appendChild(val);
+        this.telemetryStats.appendChild(row);
+      }
+    }
+
+    this.telemetryDrawer.classList.add('open');
+  }
+
   closeTelemetry() {
     if (this.telemetryDrawer) {
       this.telemetryDrawer.classList.remove('open');
@@ -475,9 +691,36 @@ export class UIController {
       location: 'SOLAR LOCATION',
       parentPlanet: 'HOST PLANET',
       composition: 'CORE COMPOSITION',
-      classification: 'CLASSIFICATION'
+      classification: 'CLASSIFICATION',
+      eventDate: 'HISTORICAL DATE & TIME',
+      targetBody: 'OBSERVATORY TARGET',
+      spacecraft: 'SPACECRAFT / MISSION',
+      crew: 'MISSION CREW',
+      coordinates: 'SURFACE COORDINATES',
+      surfaceDuration: 'SURFACE EVA DURATION',
+      flybyAltitude: 'FLYBY ALTITUDE',
+      flybyDistance: 'CLOSEST APPROACH DISTANCE',
+      flybyVelocity: 'RELATIVE VELOCITY',
+      discoveries: 'NOTABLE DISCOVERIES',
+      heliocentricDistance: 'HELIOCENTRIC DISTANCE',
+      angularSeparation: 'ANGULAR SEPARATION',
+      historicalInterval: 'HISTORICAL INTERVAL',
+      jupiterDistance: 'JUPITER-EARTH DISTANCE',
+      saturnDistance: 'SATURN-EARTH DISTANCE',
+      totalityDuration: 'MAX TOTALITY DURATION',
+      shadowPathWidth: 'UMBRAL PATH WIDTH',
+      alignmentType: 'ALIGNMENT TYPE',
+      solarCyclePhase: 'SOLAR CYCLE STATUS',
+      mainEngineBurn: 'MAIN ENGINE BURN',
+      tourDuration: 'TOUR DURATION',
+      majorDiscoveries: 'MAJOR DISCOVERIES',
+      landingSite: 'LANDING SITE',
+      landingMethod: 'ENTRY & DESCENT METHOD',
+      boundary: 'HELIOSPHERIC BOUNDARY',
+      velocity: 'HELIOCENTRIC VELOCITY',
+      solarDistance: 'DISTANCE FROM SUN'
     };
-    return map[key] || key.toUpperCase();
+    return map[key] || key.replace(/([A-Z])/g, ' $1').toUpperCase();
   }
 
   handleBodyHovered(bodyId) {

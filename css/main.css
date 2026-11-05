@@ -217,6 +217,83 @@ html, body {
   font-size: 11px;
 }
 
+/* Curated Historical Events & Flybys HUD Selector */
+.historical-events-wrapper {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  padding: 0 10px 0 12px;
+  height: 36px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.historical-events-wrapper:hover,
+.historical-events-wrapper:focus-within {
+  background: rgba(25, 34, 56, 0.85);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+.events-select-icon {
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.historical-events-select {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  height: 100%;
+  outline: none;
+  cursor: pointer;
+  padding-right: 18px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  max-width: 240px;
+}
+
+.historical-events-select:focus {
+  color: var(--accent-cyan);
+}
+
+.historical-events-select option {
+  background: #0b101d;
+  color: #e2e8f0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.historical-events-select optgroup {
+  background: #070a14;
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 6px 4px 2px 4px;
+}
+
 .fps-badge {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -628,6 +705,30 @@ html, body {
   color: var(--text-primary);
 }
 
+.telemetry-event-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.telemetry-event-significance {
+  background: rgba(250, 204, 21, 0.08);
+  border-left: 3px solid var(--accent-gold);
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 4px;
+}
+
 /* Hover Tooltip */
 .hover-tooltip {
   position: absolute;
@@ -839,6 +940,12 @@ body.ui-hidden #btn-toggle-ui:hover {
 }
 
 /* Responsive adjustments */
+@media (max-width: 1280px) {
+  .historical-events-select {
+    max-width: 180px;
+  }
+}
+
 @media (max-width: 1140px) {
   .epoch-elapsed {
     display: none;
@@ -849,6 +956,9 @@ body.ui-hidden #btn-toggle-ui:hover {
   .brand-subtitle {
     display: none;
   }
+  .historical-events-select {
+    max-width: 140px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -858,6 +968,9 @@ body.ui-hidden #btn-toggle-ui:hover {
   }
   .brand-subtitle, .epoch-elapsed {
     display: none;
+  }
+  .historical-events-select {
+    max-width: 120px;
   }
   .control-dock {
     bottom: 12px;

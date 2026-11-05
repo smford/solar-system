@@ -1608,6 +1608,15 @@ export class SimulationEngine {
   }
 
   /**
+   * Set simulation epoch to a specific date string (YYYY-MM-DD) or Date object
+   * Immediately recomputes all celestial orbits, moon positions, and scales.
+   */
+  setSimulationDate(date) {
+    this.physics.setDate(date);
+    this.update(0);
+  }
+
+  /**
    * Programmatic smooth camera tween towards celestial body, moon, or asteroid belt
    */
   focusBody(bodyId) {
