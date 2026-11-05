@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CELESTIAL_BODIES, APP_CONFIG, ASTEROID_BELTS } from './config.js';
 import { PhysicsEngine } from './physics.js';
-import { TextureManager } from './textures.js';
+import { TextureManager, TextureGenerator } from './textures.js';
 
 export class SimulationEngine {
   constructor(canvasContainer) {
@@ -202,6 +202,12 @@ export class SimulationEngine {
         this.skyMesh.material.map = tex;
         this.skyMesh.material.needsUpdate = true;
       }
+      if (key === 'earthNight' && this.bodies.earth?.nightUniforms) {
+        this.bodies.earth.nightUniforms.uNightMap.value = tex;
+        if (this.bodies.earth.mesh?.material) {
+          this.bodies.earth.mesh.material.needsUpdate = true;
+        }
+      }
       if (key.includes('Rings')) {
         const bodyKey = key.replace('Rings', '');
         if (this.bodies[bodyKey]?.shadowUniforms) {
@@ -261,6 +267,61 @@ export class SimulationEngine {
       roughness: key === 'earth' ? 0.35 : (key === 'venus' ? 0.8 : 0.6),
       metalness: 0.05
     });
+
+    // Earth specific: Realistic night-side city lights (NASA Black Marble effect)
+    let nightUniforms = null;
+    if (key === 'earth') {
+      nightUniforms = {
+        uNightMap: { value: this.textures.earthNight || TextureGenerator.createEarthNightTexture() },
+        uSunDirLocal: { value: new THREE.Vector3(1, 0, 0) }
+      };
+
+      material.onBeforeCompile = (shader) => {
+        shader.uniforms.uNightMap = nightUniforms.uNightMap;
+        shader.uniforms.uSunDirLocal = nightUniforms.uSunDirLocal;
+
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <common>',
+          `#include <common>
+          #ifndef USE_UV
+          varying vec2 vUv;
+          #endif
+          varying vec3 vPosition;
+          varying vec3 vNormalLocal;`
+        );
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          #ifndef USE_UV
+          vUv = uv;
+          #endif
+          vPosition = position;
+          vNormalLocal = normal;`
+        );
+
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <common>',
+          `#include <common>
+          #ifndef USE_UV
+          varying vec2 vUv;
+          #endif
+          varying vec3 vPosition;
+          varying vec3 vNormalLocal;
+          uniform sampler2D uNightMap;
+          uniform vec3 uSunDirLocal;`
+        );
+
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <dithering_fragment>',
+          `#include <dithering_fragment>
+          float sunDot = dot(normalize(vNormalLocal), normalize(uSunDirLocal));
+          float nightFactor = 1.0 - smoothstep(-0.15, 0.15, sunDot);
+          vec4 nightColor = texture2D(uNightMap, vUv);
+          gl_FragColor.rgb += nightColor.rgb * nightFactor * 1.35;`
+        );
+      };
+      material.customProgramCacheKey = () => 'earth_night_lights';
+    }
 
     const mesh = new THREE.Mesh(sphereGeo, material);
     mesh.scale.set(radius, radius, radius);
@@ -348,6 +409,7 @@ export class SimulationEngine {
       haloMesh,
       cloudsMesh,
       atmosphereMesh,
+      nightUniforms,
       moonGroup,
       moonMesh,
       moons: moonsList,
@@ -991,10 +1053,108 @@ export class SimulationEngine {
   }
 
   /**
-   * General engine update step for external callers or tests
+   * Main simulation state update step
+   * Called each frame from render(), or directly for testing and programmatic stepping
    */
-  update(deltaSeconds) {
+  update(deltaSeconds = 0) {
+    // 1. Advance physics epoch & scale transitions if delta provided
+    if (deltaSeconds > 0) {
+      this.physics.update(deltaSeconds, APP_CONFIG.baseTimeScaleDaysPerSecond);
+    }
+
+    // 2. Update dynamic orbit line geometry if scale changed
+    this.updateOrbitLines();
+
+    // 3. Keep background celestial sphere centered on camera so it never clips or obscures
+    if (this.skyMesh) {
+      this.skyMesh.position.copy(this.camera.position);
+    }
+
+    // 4. Update planetary positions, axial spins, and dynamic scales
+    for (const [key, body] of Object.entries(this.bodies)) {
+      const { radius } = this.physics.getBodyDimensions(key);
+
+      if (key === 'sun') {
+        body.mesh.scale.set(radius, radius, radius);
+        // Sun axial spin
+        body.mesh.rotation.y = this.physics.calculateAxialRotation('sun');
+        continue;
+      }
+
+      // Dynamic scale update for planet mesh
+      body.mesh.scale.set(radius, radius, radius);
+
+      // Orbital position
+      const pos = this.physics.calculatePosition(key);
+      body.group.position.set(pos.x, pos.y, pos.z);
+
+      // Axial spin
+      body.mesh.rotation.y = this.physics.calculateAxialRotation(key);
+
+      // Clouds rotation on Earth
+      if (body.cloudsMesh) {
+        body.cloudsMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 1.15;
+      }
+
+      // Earth night-side city lights illumination vector
+      if (key === 'earth' && body.nightUniforms) {
+        body.mesh.updateWorldMatrix(true, false);
+        const sunWorld = new THREE.Vector3(0, 0, 0);
+        const sunLocal = body.mesh.worldToLocal(sunWorld);
+        body.nightUniforms.uSunDirLocal.value.copy(sunLocal).normalize();
+      }
+
+      // Update solar shadow projection for ring systems
+      if (body.ringMesh && body.shadowUniforms) {
+        body.mesh.updateWorldMatrix(true, false);
+        const sunWorld = new THREE.Vector3(0, 0, 0);
+        const sunLocal = body.mesh.worldToLocal(sunWorld);
+        body.shadowUniforms.uSunDirLocal.value.copy(sunLocal).normalize();
+      }
+
+      // Moon position and orbit line relative to Earth (legacy fallback)
+      if (body.moonGroup && body.config.moon && !this.moons[body.config.moon.id || 'moon']) {
+        const moonPos = this.physics.calculateMoonPosition(pos, body.config.moon);
+        body.moonGroup.position.set(moonPos.x, moonPos.y, moonPos.z);
+        body.moonMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 0.3;
+
+        if (this.moonOrbitLine) {
+          this.moonOrbitLine.position.set(pos.x, pos.y, pos.z);
+        }
+      }
+    }
+
+    // 4b. Update all natural satellites (orbital position, dynamic scale, synchronous spin)
+    for (const moon of Object.values(this.moons)) {
+      const parentBody = this.bodies[moon.parentId];
+      if (!parentBody) continue;
+      const parentPos = parentBody.group.position;
+
+      // Keplerian orbit position relative to parent planet
+      const moonPos = this.physics.calculateMoonPosition(parentPos, moon.config);
+      moon.group.position.set(moonPos.x, moonPos.y, moonPos.z);
+
+      // Orbit path line follows parent planet coordinates
+      if (moon.orbitLine) {
+        moon.orbitLine.position.set(parentPos.x, parentPos.y, parentPos.z);
+      }
+
+      // Smooth scale interpolation between exploration and true scale
+      const { radius: moonRadius } = this.physics.getMoonDimensions(moon.config);
+      moon.mesh.scale.set(moonRadius, moonRadius, moonRadius);
+
+      // Synchronous tidal axial rotation
+      moon.mesh.rotation.y = this.physics.calculateMoonAxialRotation(moon.config);
+    }
+
+    // 4c. Update atmospheric Fresnel solar illumination vectors
     this.updateAtmospheres();
+
+    // 4d. Update 3D Asteroid Belts (Main Belt & Kuiper Belt) with Keplerian revolution and dynamic scale
+    this.updateAsteroidBelts();
+
+    // 5. Update 2D screen positions of all planetary locator markers
+    this.updatePlanetMarkers();
   }
 
   /**
@@ -1390,94 +1550,8 @@ export class SimulationEngine {
       this.fpsTimer = 0;
     }
 
-    // 1. Advance physics epoch & scale transitions
-    this.physics.update(deltaSeconds, APP_CONFIG.baseTimeScaleDaysPerSecond);
-
-    // 2. Update dynamic orbit line geometry if scale changed
-    this.updateOrbitLines();
-
-    // 3. Keep background celestial sphere centered on camera so it never clips or obscures
-    if (this.skyMesh) {
-      this.skyMesh.position.copy(this.camera.position);
-    }
-
-    // 4. Update planetary positions, axial spins, and dynamic scales
-    for (const [key, body] of Object.entries(this.bodies)) {
-      const { radius } = this.physics.getBodyDimensions(key);
-
-      if (key === 'sun') {
-        body.mesh.scale.set(radius, radius, radius);
-        // Sun axial spin
-        body.mesh.rotation.y = this.physics.calculateAxialRotation('sun');
-        continue;
-      }
-
-      // Dynamic scale update for planet mesh
-      body.mesh.scale.set(radius, radius, radius);
-
-      // Orbital position
-      const pos = this.physics.calculatePosition(key);
-      body.group.position.set(pos.x, pos.y, pos.z);
-
-      // Axial spin
-      body.mesh.rotation.y = this.physics.calculateAxialRotation(key);
-
-      // Clouds rotation on Earth
-      if (body.cloudsMesh) {
-        body.cloudsMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 1.15;
-      }
-
-      // Update solar shadow projection for ring systems
-      if (body.ringMesh && body.shadowUniforms) {
-        body.mesh.updateWorldMatrix(true, false);
-        const sunWorld = new THREE.Vector3(0, 0, 0);
-        const sunLocal = body.mesh.worldToLocal(sunWorld);
-        body.shadowUniforms.uSunDirLocal.value.copy(sunLocal).normalize();
-      }
-
-      // Moon position and orbit line relative to Earth (legacy fallback)
-      if (body.moonGroup && body.config.moon && !this.moons[body.config.moon.id || 'moon']) {
-        const moonPos = this.physics.calculateMoonPosition(pos, body.config.moon);
-        body.moonGroup.position.set(moonPos.x, moonPos.y, moonPos.z);
-        body.moonMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 0.3;
-
-        if (this.moonOrbitLine) {
-          this.moonOrbitLine.position.set(pos.x, pos.y, pos.z);
-        }
-      }
-    }
-
-    // 4b. Update all natural satellites (orbital position, dynamic scale, synchronous spin)
-    for (const moon of Object.values(this.moons)) {
-      const parentBody = this.bodies[moon.parentId];
-      if (!parentBody) continue;
-      const parentPos = parentBody.group.position;
-
-      // Keplerian orbit position relative to parent planet
-      const moonPos = this.physics.calculateMoonPosition(parentPos, moon.config);
-      moon.group.position.set(moonPos.x, moonPos.y, moonPos.z);
-
-      // Orbit path line follows parent planet coordinates
-      if (moon.orbitLine) {
-        moon.orbitLine.position.set(parentPos.x, parentPos.y, parentPos.z);
-      }
-
-      // Smooth scale interpolation between exploration and true scale
-      const { radius: moonRadius } = this.physics.getMoonDimensions(moon.config);
-      moon.mesh.scale.set(moonRadius, moonRadius, moonRadius);
-
-      // Synchronous tidal axial rotation
-      moon.mesh.rotation.y = this.physics.calculateMoonAxialRotation(moon.config);
-    }
-
-    // 4c. Update atmospheric Fresnel solar illumination vectors
-    this.updateAtmospheres();
-
-    // 4d. Update 3D Asteroid Belts (Main Belt & Kuiper Belt) with Keplerian revolution and dynamic scale
-    this.updateAsteroidBelts();
-
-    // 5. Update 2D screen positions of all planetary locator markers
-    this.updatePlanetMarkers();
+    // Simulation update step (physics, orbits, axial rotations, shadows, night lights, markers)
+    this.update(deltaSeconds);
 
     // 6. Camera target tracking if a body or moon is selected
     if (this.selectedBodyId && !this.isTransitioningCamera) {

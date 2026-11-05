@@ -197,6 +197,404 @@ export class TextureGenerator {
   }
 
   /**
+   * Earth Night-side City Lights (NASA Black Marble Effect)
+   * High-fidelity planetary night map with authentic global city light concentrations
+   * and glowing transportation corridors.
+   */
+  static createEarthNightTexture(width = 1024, height = 512) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Deep space-black base (oceans, polar ice, unpopulated expanses)
+    ctx.fillStyle = '#020306';
+    ctx.fillRect(0, 0, width, height);
+
+    // Geographic coordinate mapper (equirectangular projection)
+    const toX = (lon) => ((lon + 180) / 360) * width;
+    const toY = (lat) => ((90 - lat) / 180) * height;
+
+    // 1. Glowing city hub (incandescent core + warm golden-amber halo)
+    const drawCityHub = (lon, lat, coreR, haloR, intensity = 1.0) => {
+      const cx = toX(lon);
+      const cy = toY(lat);
+
+      const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
+      halo.addColorStop(0, `rgba(255, 195, 95, ${0.55 * intensity})`);
+      halo.addColorStop(0.35, `rgba(235, 155, 60, ${0.3 * intensity})`);
+      halo.addColorStop(0.7, `rgba(200, 115, 30, ${0.12 * intensity})`);
+      halo.addColorStop(1, 'rgba(160, 80, 20, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
+      ctx.fill();
+
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+      core.addColorStop(0, `rgba(255, 252, 230, ${0.98 * intensity})`);
+      core.addColorStop(0.3, `rgba(255, 230, 160, ${0.88 * intensity})`);
+      core.addColorStop(0.7, `rgba(255, 190, 95, ${0.65 * intensity})`);
+      core.addColorStop(1, 'rgba(255, 160, 60, 0)');
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    // 2. Suburban & regional point-cluster noise
+    const drawCluster = (lon, lat, spreadLon, spreadLat, count, intensity = 0.8) => {
+      for (let i = 0; i < count; i++) {
+        const u1 = Math.random();
+        const u2 = Math.random();
+        const rNorm = Math.sqrt(-2.0 * Math.log(u1 || 0.0001)) * 0.45;
+        const theta = 2.0 * Math.PI * u2;
+        const dLon = rNorm * Math.cos(theta) * spreadLon;
+        const dLat = rNorm * Math.sin(theta) * spreadLat;
+        const cx = toX(lon + dLon);
+        const cy = toY(lat + dLat);
+        const r = Math.random() * 1.5 + 0.4;
+        const alpha = (Math.random() * 0.45 + 0.35) * intensity;
+        ctx.fillStyle = Math.random() > 0.35
+          ? `rgba(255, 230, 160, ${alpha})`
+          : `rgba(255, 190, 95, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    // 3. Network branching / highway corridor
+    const drawArtery = (lon1, lat1, lon2, lat2, segments = 6, jitter = 0.2, alpha = 0.4) => {
+      const x1 = toX(lon1);
+      const y1 = toY(lat1);
+      const x2 = toX(lon2);
+      const y2 = toY(lat2);
+
+      ctx.strokeStyle = `rgba(255, 205, 120, ${alpha * 0.5})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const jx = Math.sin(i * 1.8) * jitter * (width / 360);
+        const jy = Math.cos(i * 2.2) * jitter * (height / 180);
+        const nx = x1 + (x2 - x1) * t + jx;
+        const ny = y1 + (y2 - y1) * t + jy;
+        ctx.lineTo(nx, ny);
+        if (Math.random() > 0.4) {
+          ctx.fillStyle = `rgba(255, 220, 140, ${alpha * 0.75})`;
+          ctx.fillRect(nx - 0.5, ny - 0.5, 1.2, 1.2);
+        }
+      }
+      ctx.stroke();
+    };
+
+    // 4. Ribbon strip (Nile river, coastlines)
+    const drawRibbon = (points, widthPx = 1.6, alpha = 0.75) => {
+      ctx.strokeStyle = `rgba(255, 225, 140, ${alpha})`;
+      ctx.lineWidth = widthPx;
+      ctx.beginPath();
+      for (let i = 0; i < points.length; i++) {
+        const px = toX(points[i][0]);
+        const py = toY(points[i][1]);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    };
+
+    // --- NORTH AMERICA ---
+    // US Northeast Corridor (Bos-Wash Megalopolis)
+    drawCluster(-74.0, 40.7, 4.5, 3.0, 320, 1.0);
+    drawCityHub(-74.0, 40.71, 3.8, 11.0, 1.0); // NYC
+    drawCityHub(-71.06, 42.36, 2.6, 7.5, 0.9); // Boston
+    drawCityHub(-75.16, 39.95, 2.8, 8.0, 0.9); // Philadelphia
+    drawCityHub(-76.61, 39.29, 2.3, 6.5, 0.85); // Baltimore
+    drawCityHub(-77.04, 38.90, 2.7, 8.0, 0.95); // Washington DC
+    drawArtery(-71.06, 42.36, -74.0, 40.71, 5, 0.1, 0.6);
+    drawArtery(-74.0, 40.71, -75.16, 39.95, 4, 0.1, 0.6);
+    drawArtery(-75.16, 39.95, -76.61, 39.29, 4, 0.1, 0.6);
+    drawArtery(-76.61, 39.29, -77.04, 38.90, 3, 0.1, 0.6);
+
+    // Chicago & Great Lakes / Midwest
+    drawCluster(-87.6, 41.88, 5.0, 3.5, 280, 0.95);
+    drawCityHub(-87.63, 41.88, 3.5, 10.0, 1.0); // Chicago
+    drawCityHub(-83.05, 42.33, 2.5, 7.0, 0.85); // Detroit
+    drawCityHub(-81.69, 41.50, 2.3, 6.5, 0.8); // Cleveland
+    drawCityHub(-86.16, 39.77, 2.2, 6.0, 0.8); // Indianapolis
+    drawCityHub(-83.00, 39.96, 2.1, 5.5, 0.8); // Columbus
+    drawCityHub(-90.20, 38.63, 2.2, 6.0, 0.8); // St. Louis
+    drawCityHub(-93.26, 44.98, 2.3, 6.5, 0.85); // Minneapolis
+    drawCityHub(-80.00, 40.44, 2.2, 6.0, 0.8); // Pittsburgh
+    drawCityHub(-79.38, 43.65, 2.8, 8.0, 0.9); // Toronto
+    drawCityHub(-73.57, 45.50, 2.5, 7.0, 0.85); // Montreal
+    drawArtery(-87.63, 41.88, -83.05, 42.33, 6, 0.2, 0.5);
+    drawArtery(-83.05, 42.33, -81.69, 41.50, 4, 0.15, 0.5);
+    drawArtery(-81.69, 41.50, -80.00, 40.44, 4, 0.15, 0.5);
+    drawArtery(-80.00, 40.44, -75.16, 39.95, 6, 0.2, 0.5);
+    drawArtery(-87.63, 41.88, -86.16, 39.77, 4, 0.15, 0.5);
+    drawArtery(-87.63, 41.88, -90.20, 38.63, 5, 0.2, 0.5);
+
+    // Texas Triangle
+    drawCluster(-96.8, 31.0, 3.5, 3.0, 190, 0.9);
+    drawCityHub(-96.80, 32.78, 3.0, 8.5, 0.95); // Dallas-Fort Worth
+    drawCityHub(-95.37, 29.76, 3.1, 9.0, 0.95); // Houston
+    drawCityHub(-97.74, 30.27, 2.2, 6.0, 0.85); // Austin
+    drawCityHub(-98.49, 29.42, 2.3, 6.5, 0.85); // San Antonio
+    drawArtery(-96.80, 32.78, -95.37, 29.76, 5, 0.15, 0.5);
+    drawArtery(-96.80, 32.78, -97.74, 30.27, 4, 0.15, 0.5);
+    drawArtery(-97.74, 30.27, -98.49, 29.42, 3, 0.1, 0.5);
+    drawArtery(-98.49, 29.42, -95.37, 29.76, 4, 0.15, 0.5);
+
+    // US West Coast California Corridor & Pacific Northwest
+    drawCluster(-118.24, 34.05, 2.5, 2.0, 240, 1.0);
+    drawCityHub(-118.24, 34.05, 3.8, 11.5, 1.0); // Los Angeles
+    drawCityHub(-117.16, 32.72, 2.5, 7.0, 0.9); // San Diego
+    drawCityHub(-122.42, 37.77, 3.2, 9.5, 0.95); // San Francisco / Bay Area
+    drawCityHub(-121.49, 38.58, 2.0, 5.5, 0.8); // Sacramento
+    drawCityHub(-122.33, 47.61, 2.7, 7.5, 0.9); // Seattle
+    drawCityHub(-122.68, 45.52, 2.2, 6.0, 0.85); // Portland
+    drawCityHub(-112.07, 33.45, 2.6, 7.5, 0.9); // Phoenix
+    drawCityHub(-115.14, 36.17, 2.4, 7.0, 0.95); // Las Vegas
+    drawCityHub(-104.99, 39.74, 2.4, 7.0, 0.85); // Denver
+    drawCityHub(-111.89, 40.76, 2.0, 5.5, 0.8); // Salt Lake City
+    drawArtery(-118.24, 34.05, -117.16, 32.72, 3, 0.1, 0.6);
+    drawArtery(-118.24, 34.05, -122.42, 37.77, 6, 0.2, 0.5);
+    drawArtery(-122.42, 37.77, -121.49, 38.58, 3, 0.1, 0.5);
+    drawArtery(-122.68, 45.52, -122.33, 47.61, 4, 0.1, 0.55);
+
+    // US Southeast & Florida
+    drawCluster(-84.39, 33.75, 3.0, 2.5, 140, 0.85);
+    drawCityHub(-84.39, 33.75, 2.8, 8.0, 0.9); // Atlanta
+    drawCityHub(-80.84, 35.23, 2.2, 6.0, 0.8); // Charlotte
+    drawCityHub(-80.19, 25.76, 2.9, 8.5, 0.95); // Miami
+    drawCityHub(-82.45, 27.95, 2.4, 7.0, 0.85); // Tampa
+    drawCityHub(-81.38, 28.54, 2.3, 6.5, 0.85); // Orlando
+    drawArtery(-82.45, 27.95, -81.38, 28.54, 3, 0.1, 0.5);
+    drawArtery(-81.38, 28.54, -80.19, 25.76, 5, 0.1, 0.55);
+
+    // Mexico
+    drawCluster(-99.13, 19.43, 3.0, 2.5, 200, 0.9);
+    drawCityHub(-99.13, 19.43, 3.4, 10.0, 1.0); // Mexico City
+    drawCityHub(-103.35, 20.66, 2.3, 6.5, 0.8); // Guadalajara
+    drawCityHub(-100.31, 25.69, 2.4, 7.0, 0.85); // Monterrey
+
+    // --- WESTERN EUROPE & BRITISH ISLES ---
+    // Dense glittering European web
+    drawCluster(5.0, 50.5, 9.0, 5.0, 600, 1.0);
+    drawCityHub(-0.12, 51.51, 3.8, 12.0, 1.0); // London
+    drawCityHub(-1.90, 52.48, 2.3, 6.5, 0.85); // Birmingham
+    drawCityHub(-2.24, 53.48, 2.5, 7.0, 0.85); // Manchester
+    drawCityHub(-1.55, 53.80, 2.1, 5.5, 0.8); // Leeds
+    drawCityHub(-4.25, 55.86, 2.1, 5.5, 0.8); // Glasgow
+    drawCityHub(-3.19, 55.95, 1.9, 5.0, 0.75); // Edinburgh
+    drawCityHub(-6.26, 53.35, 2.2, 6.0, 0.8); // Dublin
+
+    drawCityHub(2.35, 48.86, 3.8, 12.0, 1.0); // Paris
+    drawCityHub(4.83, 45.76, 2.2, 6.0, 0.8); // Lyon
+    drawCityHub(5.37, 43.30, 2.2, 6.0, 0.8); // Marseille
+
+    // Rhine-Ruhr & Benelux
+    drawCityHub(4.35, 50.85, 2.8, 8.0, 0.9); // Brussels
+    drawCityHub(4.40, 51.22, 2.3, 6.5, 0.85); // Antwerp
+    drawCityHub(4.90, 52.37, 2.7, 7.5, 0.9); // Amsterdam
+    drawCityHub(4.48, 51.92, 2.4, 6.8, 0.85); // Rotterdam
+    drawCityHub(6.96, 50.94, 2.9, 8.5, 0.95); // Cologne
+    drawCityHub(8.68, 50.11, 2.6, 7.5, 0.9); // Frankfurt
+    drawCityHub(9.18, 48.78, 2.3, 6.5, 0.85); // Stuttgart
+    drawCityHub(11.58, 48.14, 2.6, 7.5, 0.9); // Munich
+    drawCityHub(13.40, 52.52, 2.9, 8.5, 0.95); // Berlin
+    drawCityHub(10.00, 53.55, 2.5, 7.0, 0.85); // Hamburg
+
+    // Po Valley & Italy
+    drawCluster(10.5, 45.0, 4.0, 1.5, 240, 0.95);
+    drawCityHub(9.19, 45.46, 3.2, 9.5, 0.95); // Milan
+    drawCityHub(7.68, 45.07, 2.3, 6.5, 0.85); // Turin
+    drawCityHub(12.33, 45.44, 2.2, 6.0, 0.8); // Venice
+    drawCityHub(11.34, 44.49, 2.1, 5.5, 0.8); // Bologna
+    drawCityHub(12.50, 41.90, 2.9, 8.5, 0.9); // Rome
+    drawCityHub(14.26, 40.85, 2.5, 7.0, 0.85); // Naples
+
+    // Spain & Portugal
+    drawCityHub(-3.70, 40.42, 3.1, 9.0, 0.95); // Madrid
+    drawCityHub(2.17, 41.39, 2.8, 8.0, 0.9); // Barcelona
+    drawCityHub(-0.38, 39.47, 2.2, 6.0, 0.8); // Valencia
+    drawCityHub(-9.14, 38.72, 2.5, 7.0, 0.85); // Lisbon
+
+    // Central & Eastern Europe
+    drawCityHub(16.37, 48.21, 2.6, 7.5, 0.85); // Vienna
+    drawCityHub(14.42, 50.08, 2.3, 6.5, 0.8); // Prague
+    drawCityHub(21.01, 52.23, 2.5, 7.0, 0.85); // Warsaw
+    drawCityHub(19.04, 47.50, 2.3, 6.5, 0.8); // Budapest
+    drawCityHub(37.62, 55.75, 3.3, 10.0, 0.95); // Moscow
+    drawCityHub(30.33, 59.93, 2.6, 7.5, 0.85); // St Petersburg
+
+    // Interconnecting European arteries
+    drawArtery(-0.12, 51.51, -1.90, 52.48, 4, 0.1, 0.55);
+    drawArtery(-1.90, 52.48, -2.24, 53.48, 3, 0.1, 0.55);
+    drawArtery(2.35, 48.86, 4.35, 50.85, 5, 0.15, 0.6);
+    drawArtery(4.35, 50.85, 4.90, 52.37, 4, 0.1, 0.6);
+    drawArtery(4.35, 50.85, 6.96, 50.94, 4, 0.1, 0.6);
+    drawArtery(6.96, 50.94, 8.68, 50.11, 4, 0.1, 0.6);
+    drawArtery(8.68, 50.11, 9.18, 48.78, 3, 0.1, 0.55);
+    drawArtery(9.18, 48.78, 11.58, 48.14, 4, 0.1, 0.55);
+    drawArtery(7.68, 45.07, 9.19, 45.46, 3, 0.1, 0.6);
+    drawArtery(9.19, 45.46, 12.33, 45.44, 4, 0.1, 0.6);
+
+    // --- EAST ASIA ---
+    // Japan (Dense glittering ribbon)
+    drawCluster(139.69, 35.69, 4.0, 2.5, 360, 1.0);
+    drawCityHub(139.69, 35.69, 4.5, 14.0, 1.0); // Tokyo-Yokohama
+    drawCityHub(136.91, 35.18, 2.8, 8.0, 0.9); // Nagoya
+    drawCityHub(135.50, 34.69, 3.6, 11.0, 1.0); // Osaka-Kyoto-Kobe
+    drawCityHub(130.40, 33.59, 2.4, 7.0, 0.85); // Fukuoka
+    drawCityHub(141.35, 43.06, 2.3, 6.5, 0.8); // Sapporo
+    drawArtery(139.69, 35.69, 136.91, 35.18, 5, 0.1, 0.7);
+    drawArtery(136.91, 35.18, 135.50, 34.69, 4, 0.1, 0.7);
+
+    // South Korea (Seoul area blazing bright)
+    drawCluster(126.98, 37.57, 2.0, 1.5, 260, 1.0);
+    drawCityHub(126.98, 37.57, 3.9, 12.0, 1.0); // Seoul capital area
+    drawCityHub(129.07, 35.18, 2.6, 7.5, 0.9); // Busan
+    drawCityHub(128.60, 35.87, 2.2, 6.0, 0.85); // Daegu
+    drawArtery(126.98, 37.57, 128.60, 35.87, 4, 0.1, 0.6);
+    drawArtery(128.60, 35.87, 129.07, 35.18, 3, 0.1, 0.6);
+
+    // Eastern China Coast & Megalopolises
+    drawCluster(120.0, 31.5, 7.0, 8.0, 650, 1.0);
+    drawCityHub(116.40, 39.90, 4.0, 12.5, 1.0); // Beijing
+    drawCityHub(117.20, 39.12, 3.0, 9.0, 0.95); // Tianjin
+    drawCityHub(121.47, 31.23, 4.2, 13.0, 1.0); // Shanghai
+    drawCityHub(120.58, 31.30, 2.6, 7.5, 0.9); // Suzhou
+    drawCityHub(120.15, 30.27, 2.8, 8.0, 0.9); // Hangzhou
+    drawCityHub(118.80, 32.06, 2.8, 8.0, 0.9); // Nanjing
+    drawCityHub(114.31, 30.59, 2.9, 8.5, 0.9); // Wuhan
+    drawCityHub(113.26, 23.13, 3.8, 11.5, 1.0); // Guangzhou (Pearl River Delta)
+    drawCityHub(114.06, 22.54, 3.6, 11.0, 1.0); // Shenzhen
+    drawCityHub(114.17, 22.32, 3.4, 10.0, 1.0); // Hong Kong
+    drawCityHub(104.07, 30.66, 3.0, 9.0, 0.9); // Chengdu
+    drawCityHub(106.55, 29.56, 3.0, 9.0, 0.9); // Chongqing
+    drawCityHub(108.94, 34.26, 2.7, 7.5, 0.85); // Xi'an
+
+    // Taiwan
+    drawCluster(120.8, 24.0, 1.5, 2.0, 130, 0.95);
+    drawCityHub(121.56, 25.03, 2.9, 8.5, 0.95); // Taipei
+    drawCityHub(120.31, 22.62, 2.4, 7.0, 0.85); // Kaohsiung
+
+    // --- SOUTH ASIA ---
+    // Indo-Gangetic Plain & Indian Metros
+    drawCluster(80.0, 26.5, 10.0, 3.0, 500, 0.95);
+    drawCluster(75.0, 16.0, 8.0, 6.0, 350, 0.9);
+    drawCityHub(77.21, 28.61, 3.8, 12.0, 1.0); // New Delhi
+    drawCityHub(80.95, 26.85, 2.6, 7.5, 0.85); // Lucknow
+    drawCityHub(82.97, 25.32, 2.2, 6.0, 0.8); // Varanasi
+    drawCityHub(85.14, 25.61, 2.3, 6.5, 0.8); // Patna
+    drawCityHub(88.36, 22.57, 3.4, 10.0, 0.95); // Kolkata
+    drawCityHub(72.88, 19.08, 3.7, 11.5, 1.0); // Mumbai
+    drawCityHub(73.85, 18.52, 2.7, 7.5, 0.85); // Pune
+    drawCityHub(77.59, 12.97, 3.2, 9.5, 0.95); // Bengaluru
+    drawCityHub(80.27, 13.08, 3.0, 9.0, 0.9); // Chennai
+    drawCityHub(78.49, 17.39, 2.9, 8.5, 0.9); // Hyderabad
+    drawCityHub(72.57, 23.02, 2.8, 8.0, 0.85); // Ahmedabad
+    drawCityHub(67.00, 24.86, 3.2, 9.5, 0.9); // Karachi
+    drawCityHub(74.35, 31.52, 2.9, 8.5, 0.85); // Lahore
+    drawCityHub(90.41, 23.81, 3.1, 9.0, 0.9); // Dhaka
+
+    // Indo-Gangetic Artery
+    drawArtery(77.21, 28.61, 80.95, 26.85, 6, 0.2, 0.6);
+    drawArtery(80.95, 26.85, 82.97, 25.32, 4, 0.15, 0.6);
+    drawArtery(82.97, 25.32, 85.14, 25.61, 4, 0.15, 0.6);
+    drawArtery(85.14, 25.61, 88.36, 22.57, 6, 0.2, 0.6);
+    drawArtery(72.88, 19.08, 73.85, 18.52, 3, 0.1, 0.6);
+
+    // --- NILE RIVER & DELTA (EGYPT) ---
+    const nilePoints = [
+      [32.90, 24.09], // Aswan
+      [32.85, 24.60],
+      [32.70, 25.30],
+      [32.64, 25.69], // Luxor
+      [32.30, 26.15],
+      [31.80, 26.56],
+      [31.18, 27.18], // Asyut
+      [30.85, 28.10],
+      [31.10, 29.07],
+      [31.25, 29.85],
+      [31.24, 30.04]  // Cairo
+    ];
+    drawRibbon(nilePoints, 2.0, 0.9);
+    drawCluster(31.2, 30.8, 1.8, 0.8, 180, 0.95);
+    drawCityHub(31.24, 30.04, 3.6, 11.0, 1.0); // Cairo
+    drawCityHub(29.92, 31.20, 2.8, 8.5, 0.9); // Alexandria
+    drawCityHub(32.30, 31.26, 2.2, 6.0, 0.8); // Port Said
+
+    // Persian Gulf & Middle East
+    drawCluster(53.0, 25.0, 4.0, 2.0, 160, 0.9);
+    drawCityHub(55.27, 25.20, 3.4, 10.5, 1.0); // Dubai
+    drawCityHub(54.37, 24.45, 2.8, 8.0, 0.9); // Abu Dhabi
+    drawCityHub(51.53, 25.29, 2.6, 7.5, 0.9); // Doha
+    drawCityHub(47.98, 29.38, 2.7, 7.5, 0.9); // Kuwait City
+    drawCityHub(46.72, 24.71, 3.1, 9.0, 0.9); // Riyadh
+    drawCityHub(50.10, 26.43, 2.6, 7.5, 0.85); // Dammam
+    drawCityHub(34.78, 32.08, 2.8, 8.0, 0.9); // Tel Aviv
+    drawCityHub(35.50, 33.89, 2.3, 6.5, 0.85); // Beirut
+    drawCityHub(35.93, 31.95, 2.4, 7.0, 0.85); // Amman
+    drawCityHub(28.98, 41.01, 3.4, 10.5, 0.95); // Istanbul
+    drawCityHub(32.85, 39.93, 2.6, 7.5, 0.85); // Ankara
+    drawCityHub(51.39, 35.69, 3.2, 9.5, 0.9); // Tehran
+
+    // --- SOUTHEAST ASIA ---
+    drawCityHub(103.82, 1.35, 3.2, 9.5, 1.0); // Singapore
+    drawCityHub(101.69, 3.14, 2.7, 8.0, 0.9); // Kuala Lumpur
+    drawCityHub(100.50, 13.76, 3.4, 10.0, 0.95); // Bangkok
+    drawCityHub(106.85, -6.21, 3.6, 11.0, 0.95); // Jakarta
+    drawCityHub(120.98, 14.60, 3.4, 10.0, 0.95); // Manila
+    drawCityHub(106.63, 10.82, 2.8, 8.0, 0.9); // Ho Chi Minh City
+
+    // --- SOUTH AMERICA ---
+    // Brazilian Coast Megalopolis
+    drawCluster(-45.0, -23.0, 3.5, 2.5, 200, 0.95);
+    drawCityHub(-46.63, -23.55, 3.8, 11.5, 1.0); // São Paulo
+    drawCityHub(-43.17, -22.91, 3.4, 10.0, 0.95); // Rio de Janeiro
+    drawCityHub(-43.94, -19.92, 2.6, 7.5, 0.85); // Belo Horizonte
+    drawCityHub(-47.88, -15.79, 2.5, 7.0, 0.85); // Brasília
+    drawArtery(-46.63, -23.55, -43.17, -22.91, 5, 0.15, 0.6);
+
+    // Argentina & Chile
+    drawCluster(-58.38, -34.60, 2.5, 2.0, 150, 0.9);
+    drawCityHub(-58.38, -34.60, 3.4, 10.0, 0.95); // Buenos Aires
+    drawCityHub(-64.19, -31.42, 2.2, 6.0, 0.8); // Córdoba
+    drawCityHub(-70.67, -33.45, 3.0, 9.0, 0.9); // Santiago
+    drawCityHub(-77.04, -12.05, 3.0, 9.0, 0.9); // Lima
+    drawCityHub(-74.07, 4.71, 3.0, 9.0, 0.9); // Bogotá
+
+    // --- AUSTRALIA & NEW ZEALAND ---
+    // Coastal fringe only (Outback remains pitch dark)
+    drawCityHub(151.21, -33.87, 3.2, 9.5, 0.95); // Sydney
+    drawCityHub(144.96, -37.81, 3.0, 9.0, 0.9); // Melbourne
+    drawCityHub(153.03, -27.47, 2.6, 7.5, 0.85); // Brisbane
+    drawCityHub(115.86, -31.95, 2.5, 7.0, 0.85); // Perth
+    drawCityHub(138.60, -34.93, 2.2, 6.0, 0.8); // Adelaide
+    drawCityHub(174.76, -36.85, 2.3, 6.5, 0.85); // Auckland
+    drawArtery(151.21, -33.87, 144.96, -37.81, 6, 0.15, 0.5);
+    drawArtery(151.21, -33.87, 153.03, -27.47, 5, 0.15, 0.5);
+
+    // --- AFRICA ---
+    // South Africa & Key population hubs (Sahara and Congo basin dark)
+    drawCluster(28.1, -26.0, 2.0, 1.5, 140, 0.9);
+    drawCityHub(28.04, -26.20, 3.2, 9.5, 0.95); // Johannesburg
+    drawCityHub(28.23, -25.75, 2.3, 6.5, 0.85); // Pretoria
+    drawCityHub(18.42, -33.92, 2.6, 7.5, 0.85); // Cape Town
+    drawCityHub(31.02, -29.86, 2.4, 7.0, 0.8); // Durban
+    drawCityHub(3.38, 6.52, 3.2, 9.5, 0.9); // Lagos
+    drawCityHub(36.82, -1.29, 2.6, 7.5, 0.85); // Nairobi
+    drawCityHub(-7.59, 33.57, 2.5, 7.0, 0.85); // Casablanca
+    drawCityHub(3.06, 36.75, 2.3, 6.5, 0.8); // Algiers
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
    * Earth Cloud Overlay Texture (Transparent alpha)
    */
   static createEarthCloudsTexture(width = 1024, height = 512) {
@@ -800,6 +1198,10 @@ export class TextureGenerator {
 }
 
 export class TextureManager {
+  static loadTextures(onProgress, onError) {
+    return this.loadAllTextures(onProgress, onError);
+  }
+
   static loadAllTextures(onProgress, onError) {
     const loader = new THREE.TextureLoader();
 
@@ -808,6 +1210,7 @@ export class TextureManager {
       mercury: 'assets/textures/mercury.jpg',
       venus: 'assets/textures/venus.jpg',
       earth: 'assets/textures/earth.jpg',
+      earthNight: 'assets/textures/earth_night.jpg',
       earthClouds: 'assets/textures/earth_clouds.jpg',
       moon: 'assets/textures/moon.jpg',
       mars: 'assets/textures/mars.jpg',
@@ -824,6 +1227,7 @@ export class TextureManager {
       mercury: () => TextureGenerator.createMercuryTexture(),
       venus: () => TextureGenerator.createVenusTexture(),
       earth: () => TextureGenerator.createEarthTexture(),
+      earthNight: () => TextureGenerator.createEarthNightTexture(),
       earthClouds: () => TextureGenerator.createEarthCloudsTexture(),
       moon: () => TextureGenerator.createMoonTexture(),
       mars: () => TextureGenerator.createMarsTexture(),
@@ -836,6 +1240,7 @@ export class TextureManager {
     };
 
     const textures = {
+      earthNight: TextureGenerator.createEarthNightTexture(),
       io: TextureGenerator.createIoTexture(),
       europa: TextureGenerator.createEuropaTexture(),
       ganymede: TextureGenerator.createGanymedeTexture(),
@@ -855,11 +1260,15 @@ export class TextureManager {
         },
         undefined,
         (err) => {
-          console.warn(`NASA texture ${path} not loaded. Using procedural fallback.`);
+          if (key !== 'earthNight') {
+            console.warn(`NASA texture ${path} not loaded. Using procedural fallback.`);
+          }
           if (fallbacks[key]) {
             textures[key] = fallbacks[key]();
+            textures[key].colorSpace = THREE.SRGBColorSpace;
+            textures[key].needsUpdate = true;
           }
-          if (onError) onError(key, err);
+          if (onError && key !== 'earthNight') onError(key, err);
         }
       );
       textures[key].colorSpace = THREE.SRGBColorSpace;
