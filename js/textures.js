@@ -505,6 +505,298 @@ export class TextureGenerator {
     texture.colorSpace = THREE.SRGBColorSpace;
     return texture;
   }
+
+  /**
+   * Io Texture (Vivid sulfur yellows, oranges, and volcanic calderas)
+   */
+  static createIoTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Base mottled sulfur field
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, '#eab308');
+    grad.addColorStop(0.3, '#f59e0b');
+    grad.addColorStop(0.7, '#d97706');
+    grad.addColorStop(1, '#ca8a04');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Sulfur patches & silicate plains
+    for (let i = 0; i < 40; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const r = Math.random() * 35 + 10;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(254, 240, 138, 0.35)' : 'rgba(234, 88, 12, 0.25)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Volcanic calderas (dark pits with red/black halos like Pele & Loki)
+    for (let i = 0; i < 25; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const r = Math.random() * 8 + 3;
+
+      // Sulfur fallout ring
+      ctx.strokeStyle = 'rgba(185, 28, 28, 0.6)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Dark volcanic pit
+      ctx.fillStyle = 'rgba(24, 24, 27, 0.85)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
+   * Europa Texture (Icy white-blue with reddish linear fractures)
+   */
+  static createEuropaTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Pristine water-ice crust
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, '#e0f2fe');
+    grad.addColorStop(0.5, '#f0f9ff');
+    grad.addColorStop(1, '#bae6fd');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Subtle mottled ice plains
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.3)';
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 50 + 15, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Global crisscrossing tectonic lineae (fractures)
+    ctx.strokeStyle = 'rgba(180, 83, 9, 0.55)';
+    for (let i = 0; i < 35; i++) {
+      ctx.lineWidth = Math.random() * 2.5 + 0.8;
+      ctx.beginPath();
+      const startX = Math.random() * width;
+      const startY = Math.random() * height;
+      ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(
+        startX + (Math.random() - 0.5) * 150,
+        startY + (Math.random() - 0.5) * 100,
+        startX + (Math.random() - 0.5) * 200,
+        startY + (Math.random() - 0.5) * 120,
+        (startX + Math.random() * 300) % width,
+        (startY + Math.random() * 200) % height
+      );
+      ctx.stroke();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
+   * Ganymede Texture (Grooved slate-grey terrain and bright crater rays)
+   */
+  static createGanymedeTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Ancient dark furrowed terrain
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(0, 0, width, height);
+
+    // Lighter grooved terrain patches
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 45 + 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Impact craters and bright ray systems
+    for (let i = 0; i < 50; i++) {
+      const cx = Math.random() * width;
+      const cy = Math.random() * height;
+      const cr = Math.random() * 6 + 1.5;
+
+      // White crater rays
+      if (i < 8) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 1;
+        for (let r = 0; r < 6; r++) {
+          const ang = (r / 6) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(ang) * 45, cy + Math.sin(ang) * 45);
+          ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = 'rgba(241, 245, 249, 0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
+   * Callisto Texture (Dark heavily cratered ice-rock surface)
+   */
+  static createCallistoTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Ancient dark carbonaceous ice-rock
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(0, 0, width, height);
+
+    // Heavy cratering with bright ice rims
+    for (let i = 0; i < 220; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const r = Math.random() * 5 + 1;
+
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bright frost-rimmed edge
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(x + 0.3, y + 0.3, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
+   * Titan Texture (Dense golden-orange smog atmosphere)
+   */
+  static createTitanTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Deep hydrocarbon atmospheric gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, '#b45309');
+    grad.addColorStop(0.25, '#d97706');
+    grad.addColorStop(0.5, '#f59e0b');
+    grad.addColorStop(0.75, '#d97706');
+    grad.addColorStop(1, '#92400e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Subtle atmospheric haze bands
+    ctx.fillStyle = 'rgba(254, 215, 170, 0.15)';
+    for (let i = 0; i < 16; i++) {
+      ctx.fillRect(0, (i / 16) * height, width, 6);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
+   * Enceladus Texture (Reflective brilliant white ice with cyan tiger stripes)
+   */
+  static createEnceladusTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // 99% albedo pure fresh ice
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Subtle soft ice shadows
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.35)';
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 30 + 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // South polar "Tiger Stripe" cryovolcanic fissures
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+    ctx.lineWidth = 1.6;
+    for (let i = 0; i < 4; i++) {
+      const sy = height * 0.82 + i * 5;
+      ctx.beginPath();
+      ctx.moveTo(width * 0.3, sy);
+      ctx.bezierCurveTo(width * 0.45, sy - 4, width * 0.55, sy + 4, width * 0.7, sy);
+      ctx.stroke();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  /**
+   * Triton Texture (Pastel nitrogen blue-pink cantaloupe terrain)
+   */
+  static createTritonTexture(width = 512, height = 256) {
+    const canvas = this.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Frozen nitrogen and methane ice gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, '#c4b5fd');
+    grad.addColorStop(0.3, '#ddd6fe');
+    grad.addColorStop(0.6, '#fce7f3');
+    grad.addColorStop(1, '#e0e7ff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Cantaloupe terrain dimples
+    for (let i = 0; i < 90; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const r = Math.random() * 12 + 4;
+      ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Cryogeyser dark plumes
+    ctx.fillStyle = 'rgba(76, 29, 149, 0.3)';
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * width;
+      const y = height * 0.65 + Math.random() * (height * 0.25);
+      ctx.fillRect(x, y, 2, 8);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
 }
 
 export class TextureManager {
@@ -543,7 +835,15 @@ export class TextureManager {
       milkyway: () => null
     };
 
-    const textures = {};
+    const textures = {
+      io: TextureGenerator.createIoTexture(),
+      europa: TextureGenerator.createEuropaTexture(),
+      ganymede: TextureGenerator.createGanymedeTexture(),
+      callisto: TextureGenerator.createCallistoTexture(),
+      titan: TextureGenerator.createTitanTexture(),
+      enceladus: TextureGenerator.createEnceladusTexture(),
+      triton: TextureGenerator.createTritonTexture()
+    };
 
     for (const [key, path] of Object.entries(paths)) {
       textures[key] = loader.load(

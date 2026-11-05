@@ -133,7 +133,9 @@ export const CELESTIAL_BODIES = {
     hasClouds: true,
     hasMoon: true,
     moon: {
+      id: 'moon',
       name: 'Moon (Luna)',
+      parentId: 'earth',
       rotationHours: 655.7, // 27.32 days
       radiusMultiplier: 0.3,
       orbitDistance: 5.8,
@@ -141,6 +143,40 @@ export const CELESTIAL_BODIES = {
       rotationPeriod: 27.32,
       color: '#cbd5e1'
     },
+    hasMoons: true,
+    moons: [
+      {
+        id: 'moon',
+        name: 'Moon (Luna)',
+        parentId: 'earth',
+        color: '#cbd5e1',
+        orbitPeriod: 27.32,
+        rotationHours: 655.7,
+        rotationPeriod: 27.32,
+        inclination: 5.14,
+        initialAngle: 0.8,
+        exploration: {
+          radius: 1.08,
+          orbitDistance: 6.8
+        },
+        trueScale: {
+          radius: 0.27,
+          orbitDistance: 3.6
+        },
+        orbitDistance: 6.8,
+        description: "Earth's only natural satellite, tidally locked with ancient cratered highlands and basaltic lunar maria.",
+        telemetry: {
+          diameter: '3,474 km',
+          relativeSize: '0.272 × Earth',
+          mass: '7.342 × 10²² kg (0.0123 Earths)',
+          surfaceTemp: '-130 °C to 120 °C',
+          surfaceGravity: '1.62 m/s² (0.165 g)',
+          orbitalPeriod: '27.32 days',
+          parentPlanet: 'Earth',
+          classification: 'Major silicate natural satellite'
+        }
+      }
+    ],
     telemetry: {
       diameter: '12,742 km',
       relativeSize: '1.000 (Reference)',
@@ -211,6 +247,133 @@ export const CELESTIAL_BODIES = {
     eccentricity: 0.0484,
     axialTilt: 3.13,
     orbitColor: '#fcd34d',
+    hasMoons: true,
+    moons: [
+      {
+        id: 'io',
+        name: 'Io',
+        parentId: 'jupiter',
+        color: '#f59e0b',
+        orbitPeriod: 1.77,
+        rotationHours: 42.48,
+        rotationPeriod: 1.77,
+        inclination: 0.05,
+        initialAngle: 0.5,
+        exploration: {
+          radius: 0.85,
+          orbitDistance: 13.0
+        },
+        trueScale: {
+          radius: 0.26,
+          orbitDistance: 5.5
+        },
+        orbitDistance: 13.0,
+        description: 'The most volcanically active body in the Solar System, with hundreds of sulfur-spewing volcanoes powered by Jovian tidal flexing.',
+        telemetry: {
+          diameter: '3,643 km',
+          relativeSize: '0.286 × Earth',
+          mass: '8.932 × 10²² kg',
+          surfaceTemp: '-143 °C (Volcanic peaks: 1,300 °C)',
+          surfaceGravity: '1.80 m/s² (0.183 g)',
+          orbitalPeriod: '1.77 days',
+          parentPlanet: 'Jupiter',
+          classification: 'Galilean volcanic satellite'
+        }
+      },
+      {
+        id: 'europa',
+        name: 'Europa',
+        parentId: 'jupiter',
+        color: '#bae6fd',
+        orbitPeriod: 3.55,
+        rotationHours: 85.2,
+        rotationPeriod: 3.55,
+        inclination: 0.47,
+        initialAngle: 2.1,
+        exploration: {
+          radius: 0.78,
+          orbitDistance: 16.5
+        },
+        trueScale: {
+          radius: 0.23,
+          orbitDistance: 7.2
+        },
+        orbitDistance: 16.5,
+        description: 'Smooth, brilliant water-ice shell crisscrossed by dark fractures, concealing a global subsurface liquid ocean.',
+        telemetry: {
+          diameter: '3,122 km',
+          relativeSize: '0.245 × Earth',
+          mass: '4.800 × 10²² kg',
+          surfaceTemp: '-160 °C (Cryogenic ice sheet)',
+          surfaceGravity: '1.32 m/s² (0.134 g)',
+          orbitalPeriod: '3.55 days',
+          parentPlanet: 'Jupiter',
+          classification: 'Galilean icy ocean satellite'
+        }
+      },
+      {
+        id: 'ganymede',
+        name: 'Ganymede',
+        parentId: 'jupiter',
+        color: '#94a3b8',
+        orbitPeriod: 7.15,
+        rotationHours: 171.6,
+        rotationPeriod: 7.15,
+        inclination: 0.20,
+        initialAngle: 3.8,
+        exploration: {
+          radius: 1.25,
+          orbitDistance: 21.0
+        },
+        trueScale: {
+          radius: 0.38,
+          orbitDistance: 9.6
+        },
+        orbitDistance: 21.0,
+        description: 'Largest natural satellite in the Solar System—larger than Mercury—and the only moon possessing an intrinsic magnetic dipole field.',
+        telemetry: {
+          diameter: '5,268 km',
+          relativeSize: '0.413 × Earth (Largest moon)',
+          mass: '1.482 × 10²³ kg',
+          surfaceTemp: '-163 °C',
+          surfaceGravity: '1.43 m/s² (0.146 g)',
+          orbitalPeriod: '7.15 days',
+          parentPlanet: 'Jupiter',
+          classification: 'Galilean magnetic giant satellite'
+        }
+      },
+      {
+        id: 'callisto',
+        name: 'Callisto',
+        parentId: 'jupiter',
+        color: '#64748b',
+        orbitPeriod: 16.69,
+        rotationHours: 400.56,
+        rotationPeriod: 16.69,
+        inclination: 0.28,
+        initialAngle: 5.4,
+        exploration: {
+          radius: 1.15,
+          orbitDistance: 26.5
+        },
+        trueScale: {
+          radius: 0.35,
+          orbitDistance: 12.8
+        },
+        orbitDistance: 26.5,
+        description: 'Heavily cratered, ancient frozen surface with the highest impact crater density in the Solar System, showing almost no geologic activity.',
+        telemetry: {
+          diameter: '4,821 km',
+          relativeSize: '0.378 × Earth',
+          mass: '1.076 × 10²³ kg',
+          surfaceTemp: '-139 °C',
+          surfaceGravity: '1.24 m/s² (0.126 g)',
+          orbitalPeriod: '16.69 days',
+          parentPlanet: 'Jupiter',
+          classification: 'Galilean ancient cratered satellite'
+        }
+      }
+    ],
     telemetry: {
       diameter: '139,820 km',
       relativeSize: '10.97 × Earth',
@@ -251,6 +414,71 @@ export const CELESTIAL_BODIES = {
       outerRadiusMultiplier: 2.4
     },
     orbitColor: '#fef08a',
+    hasMoons: true,
+    moons: [
+      {
+        id: 'enceladus',
+        name: 'Enceladus',
+        parentId: 'saturn',
+        color: '#f8fafc',
+        orbitPeriod: 1.37,
+        rotationHours: 32.88,
+        rotationPeriod: 1.37,
+        inclination: 0.01,
+        initialAngle: 1.1,
+        exploration: {
+          radius: 0.52,
+          orbitDistance: 21.0
+        },
+        trueScale: {
+          radius: 0.15,
+          orbitDistance: 8.5
+        },
+        orbitDistance: 21.0,
+        description: "Dazzling ultra-reflective ice world whose active south polar cryovolcanoes spew water vapor and organics directly into Saturn's E ring.",
+        telemetry: {
+          diameter: '504 km',
+          relativeSize: '0.040 × Earth',
+          mass: '1.080 × 10²⁰ kg',
+          surfaceTemp: '-198 °C (99% albedo reflection)',
+          surfaceGravity: '0.11 m/s² (0.012 g)',
+          orbitalPeriod: '1.37 days',
+          parentPlanet: 'Saturn',
+          classification: 'Saturnian cryovolcanic ice satellite'
+        }
+      },
+      {
+        id: 'titan',
+        name: 'Titan',
+        parentId: 'saturn',
+        color: '#f59e0b',
+        orbitPeriod: 15.95,
+        rotationHours: 382.8,
+        rotationPeriod: 15.95,
+        inclination: 0.35,
+        initialAngle: 4.2,
+        exploration: {
+          radius: 1.20,
+          orbitDistance: 27.5
+        },
+        trueScale: {
+          radius: 0.37,
+          orbitDistance: 13.5
+        },
+        orbitDistance: 27.5,
+        description: "Saturn's largest moon, veiled in a dense golden nitrogen-methane haze with stable hydrocarbon lakes, rivers, and rain.",
+        telemetry: {
+          diameter: '5,149 km',
+          relativeSize: '0.404 × Earth',
+          mass: '1.345 × 10²³ kg',
+          surfaceTemp: '-179 °C (1.45 bar dense atmosphere)',
+          surfaceGravity: '1.35 m/s² (0.138 g)',
+          orbitalPeriod: '15.95 days',
+          parentPlanet: 'Saturn',
+          classification: 'Saturnian hydrocarbon atmosphere satellite'
+        }
+      }
+    ],
     telemetry: {
       diameter: '116,460 km (Equatorial)',
       relativeSize: '9.14 × Earth',
@@ -327,6 +555,40 @@ export const CELESTIAL_BODIES = {
     eccentricity: 0.0086,
     axialTilt: 28.32,
     orbitColor: '#93c5fd',
+    hasMoons: true,
+    moons: [
+      {
+        id: 'triton',
+        name: 'Triton',
+        parentId: 'neptune',
+        color: '#c4b5fd',
+        orbitPeriod: -5.88, // retrograde orbit!
+        rotationHours: -141.12,
+        rotationPeriod: -5.88,
+        inclination: 25.0,
+        initialAngle: 2.7,
+        exploration: {
+          radius: 0.82,
+          orbitDistance: 11.5
+        },
+        trueScale: {
+          radius: 0.25,
+          orbitDistance: 4.8
+        },
+        orbitDistance: 11.5,
+        description: 'A captured Kuiper Belt dwarf planet orbiting Neptune in reverse (retrograde), boasting active nitrogen cryogeysers and cantaloupe terrain.',
+        telemetry: {
+          diameter: '2,707 km',
+          relativeSize: '0.212 × Earth',
+          mass: '2.140 × 10²² kg',
+          surfaceTemp: '-235 °C (38 K, one of the coldest bodies in the Solar System)',
+          surfaceGravity: '0.78 m/s² (0.079 g)',
+          orbitalPeriod: '-5.88 days (Retrograde)',
+          parentPlanet: 'Neptune',
+          classification: 'Captured Kuiper belt retrograde satellite'
+        }
+      }
+    ],
     telemetry: {
       diameter: '49,244 km',
       relativeSize: '3.86 × Earth',
@@ -360,3 +622,30 @@ export const APP_CONFIG = {
   defaultCameraPos: { x: 0, y: 440, z: 530 },
   defaultCameraTarget: { x: 0, y: 0, z: 0 }
 };
+
+/**
+ * Helper to locate any natural satellite across parent planets by id
+ */
+export function findMoonById(moonId) {
+  if (!moonId) return null;
+  for (const body of Object.values(CELESTIAL_BODIES)) {
+    if (body.moons && Array.isArray(body.moons)) {
+      const found = body.moons.find(m => m.id === moonId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
+ * Helper to retrieve a flat array of all registered natural satellites
+ */
+export function getAllMoons() {
+  const allMoons = [];
+  for (const body of Object.values(CELESTIAL_BODIES)) {
+    if (body.moons && Array.isArray(body.moons)) {
+      allMoons.push(...body.moons);
+    }
+  }
+  return allMoons;
+}

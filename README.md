@@ -8,7 +8,7 @@ Live site: https://stephenford.org/solar-system/
 
 ## Overview
 
-The simulation models the Sun, the eight major planets, and the Moon. It runs entirely on client-side JavaScript using Three.js and vanilla ES modules, with no build tools, bundlers, or external package installations required.
+The simulation models the Sun, the eight major planets, and major natural satellites (Earth's Moon, the Galilean moons of Jupiter, Saturn's Titan and Enceladus, and Neptune's retrograde moon Triton). It runs entirely on client-side JavaScript using Three.js and vanilla ES modules, with no build tools, bundlers, or external package installations required.
 
 ### Key Capabilities
 

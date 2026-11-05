@@ -2,7 +2,7 @@
  * HELIOS User Interface & Telemetry HUD Controller
  * Minimalist dark glassmorphic control dock, side telemetry drawer, timeline scrubbers, and selectors.
  */
-import { CELESTIAL_BODIES, TIME_PRESETS } from './config.js';
+import { CELESTIAL_BODIES, TIME_PRESETS, findMoonById } from './config.js';
 
 export class UIController {
   constructor(engine) {
@@ -314,8 +314,11 @@ export class UIController {
   handleBodySelected(bodyId) {
     // Update quick bar active state
     const chips = this.bodyQuickBar.querySelectorAll('.body-chip');
+    const moon = findMoonById(bodyId);
+    const activePlanetId = moon ? moon.parentId : bodyId;
+
     chips.forEach(chip => {
-      chip.classList.toggle('active', chip.dataset.bodyId === bodyId);
+      chip.classList.toggle('active', chip.dataset.bodyId === activePlanetId);
     });
 
     if (!bodyId) {
@@ -327,16 +330,30 @@ export class UIController {
   }
 
   openTelemetry(bodyId) {
-    const config = CELESTIAL_BODIES[bodyId];
+    const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId);
     if (!config || !this.telemetryDrawer) return;
 
     this.telemetryTitle.textContent = config.name.toUpperCase();
-    this.telemetryType.textContent = config.type;
+    this.telemetryType.textContent = config.type || `NATURAL SATELLITE (${(config.parentId || 'PLANET').toUpperCase()})`;
 
     // Render Telemetry data grid
-    const stats = config.telemetry;
     this.telemetryStats.innerHTML = '';
 
+    // Moon or planet descriptive overview
+    if (config.description) {
+      const descEl = document.createElement('div');
+      descEl.className = 'telemetry-description';
+      descEl.style.padding = '0.65rem 0 0.85rem 0';
+      descEl.style.fontSize = '0.82rem';
+      descEl.style.color = '#94a3b8';
+      descEl.style.lineHeight = '1.45';
+      descEl.style.borderBottom = '1px solid rgba(255, 255, 255, 0.08)';
+      descEl.style.marginBottom = '0.75rem';
+      descEl.textContent = config.description;
+      this.telemetryStats.appendChild(descEl);
+    }
+
+    const stats = config.telemetry || {};
     for (const [key, value] of Object.entries(stats)) {
       const row = document.createElement('div');
       row.className = 'telemetry-row';
@@ -372,11 +389,12 @@ export class UIController {
       coreTemp: 'CORE TEMPERATURE',
       surfaceGravity: 'SURFACE GRAVITY',
       distanceFromSun: 'MEAN SOLAR DISTANCE',
-      orbitalPeriod: 'ORBITAL PERIOD (YEAR)',
-      rotationPeriod: 'SIDEREAL ROTATION (DAY)',
+      orbitalPeriod: 'ORBITAL PERIOD',
+      rotationPeriod: 'SIDEREAL ROTATION',
       moons: 'NATURAL SATELLITES',
+      parentPlanet: 'HOST PLANET',
       composition: 'CORE COMPOSITION',
-      classification: 'PLANETARY CLASS'
+      classification: 'CLASSIFICATION'
     };
     return map[key] || key.toUpperCase();
   }
@@ -389,9 +407,14 @@ export class UIController {
       return;
     }
 
-    const config = CELESTIAL_BODIES[bodyId];
+    const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId);
     if (config) {
-      this.hoverTooltip.textContent = `${config.name} (${config.type})`;
+      if (config.parentId) {
+        const parentName = config.parentId.charAt(0).toUpperCase() + config.parentId.slice(1);
+        this.hoverTooltip.textContent = `${config.name} (Moon of ${parentName})`;
+      } else {
+        this.hoverTooltip.textContent = `${config.name} (${config.type})`;
+      }
       this.hoverTooltip.style.opacity = '1';
     }
   }

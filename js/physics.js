@@ -151,22 +151,95 @@ export class PhysicsEngine {
   }
 
   /**
-   * Calculate Moon position relative to Earth
+   * Get moon dimensions (radius and orbit distance) blended between exploration and true scale
    */
-  calculateMoonPosition(earthPos, moonConfig) {
-    const moonPeriod = moonConfig.orbitPeriod; // 27.32 days
-    const angularSpeed = (2 * Math.PI) / moonPeriod;
-    const angle = angularSpeed * this.elapsedDays;
-    
-    // Scale moon orbit distance slightly in trueScale to keep it visible
+  getMoonDimensions(moonConfig) {
+    if (!moonConfig) return { radius: 0.5, distance: 5 };
+
     const t = this.scaleInterpolation;
-    const moonDist = moonConfig.orbitDistance * (1 - t * 0.4);
+    const expRadius = moonConfig.exploration ? moonConfig.exploration.radius : (moonConfig.radiusMultiplier ? 3.6 * moonConfig.radiusMultiplier : (moonConfig.radius || 0.5));
+    const trueRadius = moonConfig.trueScale ? moonConfig.trueScale.radius : (moonConfig.radiusMultiplier ? 1.0 * moonConfig.radiusMultiplier : (moonConfig.radius || 0.2));
+    const radius = expRadius * (1 - t) + trueRadius * t;
+
+    const expDist = moonConfig.exploration ? moonConfig.exploration.orbitDistance : moonConfig.orbitDistance;
+    const trueDist = moonConfig.trueScale ? moonConfig.trueScale.orbitDistance : (moonConfig.orbitDistance * 0.6);
+    const distance = expDist * (1 - t) + trueDist * t;
+
+    return { radius, distance };
+  }
+
+  /**
+   * Calculate Moon position relative to its host planet
+   */
+  calculateMoonPosition(parentPos, moonConfig) {
+    if (!moonConfig) return parentPos || { x: 0, y: 0, z: 0 };
+
+    const { distance } = this.getMoonDimensions(moonConfig);
+    const moonPeriod = moonConfig.orbitPeriod || 27.32;
+    const angularSpeed = (2 * Math.PI) / moonPeriod;
+    const initial = moonConfig.initialAngle || 0;
+    const angle = initial + angularSpeed * this.elapsedDays;
+
+    const inclination = moonConfig.inclination || 0;
+    const incRad = (inclination * Math.PI) / 180;
+
+    const xOrb = distance * Math.cos(angle);
+    let yOrb, zOrb;
+
+    if (moonConfig.inclination !== undefined) {
+      yOrb = distance * Math.sin(angle) * Math.sin(incRad);
+      zOrb = distance * Math.sin(angle) * Math.cos(incRad);
+    } else {
+      yOrb = 0.2 * Math.sin(angle * 0.8);
+      zOrb = distance * Math.sin(angle);
+    }
+
+    const px = parentPos ? parentPos.x : 0;
+    const py = parentPos ? parentPos.y : 0;
+    const pz = parentPos ? parentPos.z : 0;
 
     return {
-      x: earthPos.x + moonDist * Math.cos(angle),
-      y: 0.2 * Math.sin(angle * 0.8), // slight inclination
-      z: earthPos.z + moonDist * Math.sin(angle)
+      x: px + xOrb,
+      y: py + yOrb,
+      z: pz + zOrb
     };
+  }
+
+  /**
+   * Generate vector orbit points for a moon around its parent origin
+   */
+  generateMoonOrbitPath(moonConfig, segments = 96) {
+    const { distance } = this.getMoonDimensions(moonConfig);
+    const inclination = moonConfig.inclination || 0;
+    const incRad = (inclination * Math.PI) / 180;
+
+    const points = [];
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      const x = distance * Math.cos(theta);
+      let y, z;
+      if (moonConfig.inclination !== undefined) {
+        y = distance * Math.sin(theta) * Math.sin(incRad);
+        z = distance * Math.sin(theta) * Math.cos(incRad);
+      } else {
+        y = 0.2 * Math.sin(theta * 0.8);
+        z = distance * Math.sin(theta);
+      }
+      points.push({ x, y, z });
+    }
+    return points;
+  }
+
+  /**
+   * Calculate synchronous rotation angle for tidally locked natural satellites
+   */
+  calculateMoonAxialRotation(moonConfig) {
+    const period = moonConfig.rotationPeriod || moonConfig.orbitPeriod || 27.32;
+    const sign = Math.sign(period) || 1;
+    const absPeriod = Math.abs(period);
+    const visualSec = sign * Math.max(8.0, Math.min(60.0, absPeriod * 3.5));
+    const angularVelocity = (2 * Math.PI) / visualSec;
+    return angularVelocity * this.elapsedVisualSeconds;
   }
 
   /**

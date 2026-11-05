@@ -15,6 +15,7 @@ export class SimulationEngine {
     this.physics = new PhysicsEngine(CELESTIAL_BODIES);
 
     this.bodies = {};
+    this.moons = {};
     this.orbitLines = {};
     this.planetMarkers = {};
     this.moonOrbitLine = null;
@@ -267,11 +268,8 @@ export class SimulationEngine {
     haloMesh.rotation.x = Math.PI / 2;
     mesh.add(haloMesh);
 
-    // Earth specific: Atmospheric cloud layer & Moon
+    // Earth specific: Atmospheric cloud layer
     let cloudsMesh = null;
-    let moonGroup = null;
-    let moonMesh = null;
-
     if (key === 'earth') {
       const cloudGeo = new THREE.SphereGeometry(1.025, 64, 64);
       const cloudMat = new THREE.MeshStandardMaterial({
@@ -284,38 +282,26 @@ export class SimulationEngine {
       });
       cloudsMesh = new THREE.Mesh(cloudGeo, cloudMat);
       mesh.add(cloudsMesh);
+    }
 
-      // Moon with realistic NASA Lunar Reconnaissance Orbiter texture
-      moonGroup = new THREE.Group();
-      moonGroup.name = 'moon_group';
-      const moonGeo = new THREE.SphereGeometry(radius * config.moon.radiusMultiplier, 32, 32);
-      const moonMat = new THREE.MeshStandardMaterial({
-        map: this.textures.moon,
-        roughness: 0.85,
-        metalness: 0.05
-      });
-      moonMesh = new THREE.Mesh(moonGeo, moonMat);
-      moonMesh.userData = { bodyId: 'moon', parentId: 'earth' };
-      moonGroup.add(moonMesh);
-      this.scene.add(moonGroup);
+    // Natural Satellites / Major Moons
+    const moonsList = [];
+    let moonGroup = null;
+    let moonMesh = null;
 
-      // Moon orbital path around Earth
-      const moonOrbitPts = [];
-      const mDist = config.moon.orbitDistance;
-      for (let i = 0; i <= 64; i++) {
-        const a = (i / 64) * Math.PI * 2;
-        moonOrbitPts.push(new THREE.Vector3(mDist * Math.cos(a), 0, mDist * Math.sin(a)));
+    if (config.moons && Array.isArray(config.moons)) {
+      for (const moonConfig of config.moons) {
+        const moonObj = this.buildMoon(key, moonConfig);
+        moonsList.push(moonObj);
+        this.moons[moonConfig.id] = moonObj;
+
+        // Backward compatibility for Earth's primary moon
+        if (moonConfig.id === 'moon') {
+          moonGroup = moonObj.group;
+          moonMesh = moonObj.mesh;
+          this.moonOrbitLine = moonObj.orbitLine;
+        }
       }
-      const moonOrbitGeo = new THREE.BufferGeometry().setFromPoints(moonOrbitPts);
-      const moonOrbitMat = new THREE.LineBasicMaterial({
-        color: 0x94a3b8,
-        transparent: true,
-        opacity: 0.55,
-        depthWrite: false,
-        fog: false
-      });
-      this.moonOrbitLine = new THREE.LineLoop(moonOrbitGeo, moonOrbitMat);
-      this.scene.add(this.moonOrbitLine);
     }
 
     // Saturn / Uranus Rings
@@ -339,8 +325,79 @@ export class SimulationEngine {
       cloudsMesh,
       moonGroup,
       moonMesh,
+      moons: moonsList,
       ringMesh,
       config
+    };
+  }
+
+  /**
+   * Build celestial mesh and thin orbit vector line for a natural satellite
+   */
+  buildMoon(parentKey, moonConfig) {
+    const group = new THREE.Group();
+    group.name = `${moonConfig.id}_group`;
+
+    const { radius } = this.physics.getMoonDimensions(moonConfig);
+
+    // Unit geometry (radius 1) so mesh.scale.set(radius, radius, radius) sets exact physical size
+    const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+
+    let material;
+    if (moonConfig.id === 'moon' && this.textures.moon) {
+      material = new THREE.MeshStandardMaterial({
+        map: this.textures.moon,
+        roughness: 0.85,
+        metalness: 0.05
+      });
+    } else if (this.textures[moonConfig.id]) {
+      material = new THREE.MeshStandardMaterial({
+        map: this.textures[moonConfig.id],
+        roughness: 0.75,
+        metalness: 0.05
+      });
+    } else {
+      material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(moonConfig.color || 0x94a3b8),
+        roughness: 0.75,
+        metalness: 0.05
+      });
+    }
+
+    const mesh = new THREE.Mesh(sphereGeo, material);
+    mesh.scale.set(radius, radius, radius);
+    mesh.userData = { bodyId: moonConfig.id, parentId: parentKey, isMoon: true };
+    group.add(mesh);
+    this.scene.add(group);
+
+    // Vector Thin Moon Orbit Line around host planet
+    const orbitPts = this.physics.generateMoonOrbitPath(moonConfig, 96);
+    const positions = new Float32Array(orbitPts.length * 3);
+    for (let i = 0; i < orbitPts.length; i++) {
+      positions[i * 3] = orbitPts[i].x;
+      positions[i * 3 + 1] = orbitPts[i].y;
+      positions[i * 3 + 2] = orbitPts[i].z;
+    }
+    const orbitGeo = new THREE.BufferGeometry();
+    orbitGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const orbitMat = new THREE.LineBasicMaterial({
+      color: new THREE.Color(moonConfig.color || 0x94a3b8),
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      fog: false
+    });
+    const orbitLine = new THREE.LineLoop(orbitGeo, orbitMat);
+    orbitLine.userData = { bodyId: moonConfig.id, parentId: parentKey, isMoon: true };
+    this.scene.add(orbitLine);
+
+    return {
+      id: moonConfig.id,
+      parentId: parentKey,
+      config: moonConfig,
+      group,
+      mesh,
+      orbitLine
     };
   }
 
@@ -414,6 +471,19 @@ export class SimulationEngine {
         positions[i * 3 + 2] = pathPoints[i].z;
       }
       line.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Update natural satellite orbit lines as scale interpolates
+    for (const moon of Object.values(this.moons)) {
+      if (!moon.orbitLine) continue;
+      const pathPoints = this.physics.generateMoonOrbitPath(moon.config, 96);
+      const positions = moon.orbitLine.geometry.attributes.position.array;
+      for (let i = 0; i < pathPoints.length; i++) {
+        positions[i * 3] = pathPoints[i].x;
+        positions[i * 3 + 1] = pathPoints[i].y;
+        positions[i * 3 + 2] = pathPoints[i].z;
+      }
+      moon.orbitLine.geometry.attributes.position.needsUpdate = true;
     }
   }
 
@@ -580,14 +650,16 @@ export class SimulationEngine {
     const hitTargets = [];
     for (const body of Object.values(this.bodies)) {
       hitTargets.push(body.mesh);
-      if (body.moonMesh) hitTargets.push(body.moonMesh);
+    }
+    for (const moon of Object.values(this.moons)) {
+      hitTargets.push(moon.mesh);
     }
 
     const intersects = this.raycaster.intersectObjects(hitTargets, false);
 
     if (intersects.length > 0) {
       const hit = intersects[0].object;
-      const bodyId = hit.userData.bodyId === 'moon' ? 'earth' : hit.userData.bodyId;
+      const bodyId = hit.userData.bodyId;
 
       if (this.hoveredBodyId !== bodyId) {
         this.setHoveredBody(bodyId);
@@ -602,19 +674,27 @@ export class SimulationEngine {
   }
 
   setHoveredBody(bodyId) {
-    // Reset previous hovered line
-    if (this.hoveredBodyId && this.orbitLines[this.hoveredBodyId]) {
-      const isSelected = this.selectedBodyId === this.hoveredBodyId;
-      this.orbitLines[this.hoveredBodyId].material.opacity = isSelected ? 1.0 : 0.75;
-      this.orbitLines[this.hoveredBodyId].material.color.set(isSelected ? 0xffffff : (this.bodies[this.hoveredBodyId].config.orbitColor || 0x666666));
+    // Reset previous hovered line (planet or moon)
+    if (this.hoveredBodyId) {
+      const prevLine = this.orbitLines[this.hoveredBodyId] || this.moons[this.hoveredBodyId]?.orbitLine;
+      if (prevLine) {
+        const isSelected = this.selectedBodyId === this.hoveredBodyId;
+        const origColor = this.bodies[this.hoveredBodyId]?.config?.orbitColor || this.moons[this.hoveredBodyId]?.config?.color || 0x666666;
+        const origOpacity = this.moons[this.hoveredBodyId] ? 0.38 : 0.75;
+        prevLine.material.opacity = isSelected ? 1.0 : origOpacity;
+        prevLine.material.color.set(isSelected ? 0xffffff : origColor);
+      }
     }
 
     this.hoveredBodyId = bodyId;
 
     // Highlight new hovered line
-    if (bodyId && this.orbitLines[bodyId]) {
-      this.orbitLines[bodyId].material.opacity = 1.0;
-      this.orbitLines[bodyId].material.color.set(0xffffff);
+    if (bodyId) {
+      const newLine = this.orbitLines[bodyId] || this.moons[bodyId]?.orbitLine;
+      if (newLine) {
+        newLine.material.opacity = 1.0;
+        newLine.material.color.set(0xffffff);
+      }
     }
 
     if (this.onHoverBody) {
@@ -628,14 +708,16 @@ export class SimulationEngine {
     const hitTargets = [];
     for (const body of Object.values(this.bodies)) {
       hitTargets.push(body.mesh);
-      if (body.moonMesh) hitTargets.push(body.moonMesh);
+    }
+    for (const moon of Object.values(this.moons)) {
+      hitTargets.push(moon.mesh);
     }
 
     const intersects = this.raycaster.intersectObjects(hitTargets, false);
 
     if (intersects.length > 0) {
       const hit = intersects[0].object;
-      const targetId = hit.userData.bodyId === 'moon' ? 'earth' : hit.userData.bodyId;
+      const targetId = hit.userData.bodyId;
       this.focusBody(targetId);
     } else {
       // If clicked empty space while focusing a body, reset
@@ -646,31 +728,44 @@ export class SimulationEngine {
   }
 
   /**
-   * Programmatic smooth camera tween towards celestial body
+   * Programmatic smooth camera tween towards celestial body or moon
    */
   focusBody(bodyId) {
-    if (!this.bodies[bodyId]) return;
+    if (!this.bodies[bodyId] && !this.moons[bodyId]) return;
 
     // Reset previous selected orbit line
-    if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
-      this.orbitLines[this.selectedBodyId].material.opacity = 0.75;
-      this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
+    if (this.selectedBodyId) {
+      const prevLine = this.orbitLines[this.selectedBodyId] || this.moons[this.selectedBodyId]?.orbitLine;
+      if (prevLine) {
+        const origColor = this.bodies[this.selectedBodyId]?.config?.orbitColor || this.moons[this.selectedBodyId]?.config?.color || 0x666666;
+        const origOpacity = this.moons[this.selectedBodyId] ? 0.38 : 0.75;
+        prevLine.material.opacity = origOpacity;
+        prevLine.material.color.set(origColor);
+      }
     }
 
     this.selectedBodyId = bodyId;
 
-    // Highlight selected body orbit
-    if (this.orbitLines[bodyId]) {
-      this.orbitLines[bodyId].material.opacity = 1.0;
-      this.orbitLines[bodyId].material.color.set(0xffffff);
+    // Highlight selected body/moon orbit line
+    const activeLine = this.orbitLines[bodyId] || this.moons[bodyId]?.orbitLine;
+    if (activeLine) {
+      activeLine.material.opacity = 1.0;
+      activeLine.material.color.set(0xffffff);
     }
 
-    const body = this.bodies[bodyId];
-    const targetPos = body.group.position.clone();
-    const { radius } = this.physics.getBodyDimensions(bodyId);
+    let targetPos, viewDist;
+    if (this.bodies[bodyId]) {
+      const body = this.bodies[bodyId];
+      targetPos = body.group.position.clone();
+      const { radius } = this.physics.getBodyDimensions(bodyId);
+      viewDist = Math.max(radius * 4.5, 9.0);
+    } else {
+      const moon = this.moons[bodyId];
+      targetPos = moon.group.position.clone();
+      const { radius } = this.physics.getMoonDimensions(moon.config);
+      viewDist = Math.max(radius * 5.0, 3.2);
+    }
 
-    // Calculate ideal camera viewing offset
-    const viewDist = Math.max(radius * 4.5, 9.0);
     const cameraEnd = new THREE.Vector3(
       targetPos.x + viewDist * 0.7,
       targetPos.y + viewDist * 0.45,
@@ -688,9 +783,14 @@ export class SimulationEngine {
    * Reset camera to zoomed-out solar top-down / isometric perspective
    */
   resetCameraView() {
-    if (this.selectedBodyId && this.orbitLines[this.selectedBodyId]) {
-      this.orbitLines[this.selectedBodyId].material.opacity = 0.75;
-      this.orbitLines[this.selectedBodyId].material.color.set(this.bodies[this.selectedBodyId].config.orbitColor || 0x666666);
+    if (this.selectedBodyId) {
+      const prevLine = this.orbitLines[this.selectedBodyId] || this.moons[this.selectedBodyId]?.orbitLine;
+      if (prevLine) {
+        const origColor = this.bodies[this.selectedBodyId]?.config?.orbitColor || this.moons[this.selectedBodyId]?.config?.color || 0x666666;
+        const origOpacity = this.moons[this.selectedBodyId] ? 0.38 : 0.75;
+        prevLine.material.opacity = origOpacity;
+        prevLine.material.color.set(origColor);
+      }
     }
 
     this.selectedBodyId = null;
@@ -802,8 +902,8 @@ export class SimulationEngine {
         body.cloudsMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 1.15;
       }
 
-      // Moon position and orbit line relative to Earth
-      if (body.moonGroup && body.config.moon) {
+      // Moon position and orbit line relative to Earth (legacy fallback)
+      if (body.moonGroup && body.config.moon && !this.moons[body.config.moon.id || 'moon']) {
         const moonPos = this.physics.calculateMoonPosition(pos, body.config.moon);
         body.moonGroup.position.set(moonPos.x, moonPos.y, moonPos.z);
         body.moonMesh.rotation.y = this.physics.calculateAxialRotation('earth') * 0.3;
@@ -814,15 +914,38 @@ export class SimulationEngine {
       }
     }
 
+    // 4b. Update all natural satellites (orbital position, dynamic scale, synchronous spin)
+    for (const moon of Object.values(this.moons)) {
+      const parentBody = this.bodies[moon.parentId];
+      if (!parentBody) continue;
+      const parentPos = parentBody.group.position;
+
+      // Keplerian orbit position relative to parent planet
+      const moonPos = this.physics.calculateMoonPosition(parentPos, moon.config);
+      moon.group.position.set(moonPos.x, moonPos.y, moonPos.z);
+
+      // Orbit path line follows parent planet coordinates
+      if (moon.orbitLine) {
+        moon.orbitLine.position.set(parentPos.x, parentPos.y, parentPos.z);
+      }
+
+      // Smooth scale interpolation between exploration and true scale
+      const { radius: moonRadius } = this.physics.getMoonDimensions(moon.config);
+      moon.mesh.scale.set(moonRadius, moonRadius, moonRadius);
+
+      // Synchronous tidal axial rotation
+      moon.mesh.rotation.y = this.physics.calculateMoonAxialRotation(moon.config);
+    }
+
     // 5. Update 2D screen positions of all planetary locator markers
     this.updatePlanetMarkers();
 
-    // 6. Camera target tracking if a body is selected
+    // 6. Camera target tracking if a body or moon is selected
     if (this.selectedBodyId && !this.isTransitioningCamera) {
-      const targetBody = this.bodies[this.selectedBodyId];
+      const targetBody = this.bodies[this.selectedBodyId] || this.moons[this.selectedBodyId];
       if (targetBody) {
         const targetPos = targetBody.group.position;
-        // Keep camera offset relative to the moving planet
+        // Keep camera offset relative to the moving planet or moon
         const offset = this.camera.position.clone().sub(this.controls.target);
         this.controls.target.copy(targetPos);
         this.camera.position.copy(targetPos).add(offset);
