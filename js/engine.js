@@ -225,69 +225,10 @@ export class SimulationEngine {
     coreMesh.userData = { bodyId: 'sun' };
     group.add(coreMesh);
 
-    // Inner Coronal Glow
-    const innerGlowGeo = new THREE.SphereGeometry(1.12, 48, 48);
-    const innerGlowMat = new THREE.MeshBasicMaterial({
-      color: 0xffb733,
-      transparent: true,
-      opacity: 0.38,
-      blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false
-    });
-    const innerGlow = new THREE.Mesh(innerGlowGeo, innerGlowMat);
-    innerGlow.scale.set(radius, radius, radius);
-    group.add(innerGlow);
-
-    // Outer Coronal Atmosphere Haze
-    const outerGlowGeo = new THREE.SphereGeometry(1.3, 48, 48);
-    const outerGlowMat = new THREE.MeshBasicMaterial({
-      color: 0xff7700,
-      transparent: true,
-      opacity: 0.18,
-      blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false
-    });
-    const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
-    outerGlow.scale.set(radius, radius, radius);
-    group.add(outerGlow);
-
-    // Radiant Solar Flare Sprite (maintains brilliant solar visibility at any zoom level)
-    const sunGlowCanvas = document.createElement('canvas');
-    sunGlowCanvas.width = 128;
-    sunGlowCanvas.height = 128;
-    const gCtx = sunGlowCanvas.getContext('2d');
-    const sunGrad = gCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    sunGrad.addColorStop(0, 'rgba(255, 235, 180, 0.95)');
-    sunGrad.addColorStop(0.2, 'rgba(255, 180, 60, 0.6)');
-    sunGrad.addColorStop(0.5, 'rgba(255, 110, 20, 0.2)');
-    sunGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    gCtx.fillStyle = sunGrad;
-    gCtx.fillRect(0, 0, 128, 128);
-
-    const sunGlowTex = new THREE.CanvasTexture(sunGlowCanvas);
-    const sunSpriteMat = new THREE.SpriteMaterial({
-      map: sunGlowTex,
-      color: 0xffeedd,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      fog: false
-    });
-    const sunSprite = new THREE.Sprite(sunSpriteMat);
-    sunSprite.scale.set(radius * 3.8, radius * 3.8, 1);
-    group.add(sunSprite);
-
     this.scene.add(group);
     this.bodies['sun'] = {
       group,
       mesh: coreMesh,
-      innerGlow,
-      outerGlow,
-      sunSprite,
       config
     };
   }
@@ -855,16 +796,7 @@ export class SimulationEngine {
       const { radius } = this.physics.getBodyDimensions(key);
 
       if (key === 'sun') {
-        // Sun dynamic coronal pulse and radiant lens flare
-        const pulse = 1.0 + Math.sin(now * 0.002) * 0.02;
-        body.innerGlow.scale.set(radius * 1.12 * pulse, radius * 1.12 * pulse, radius * 1.12 * pulse);
-        const outerPulse = 1.0 + Math.cos(now * 0.0015) * 0.035;
-        body.outerGlow.scale.set(radius * 1.3 * outerPulse, radius * 1.3 * outerPulse, radius * 1.3 * outerPulse);
         body.mesh.scale.set(radius, radius, radius);
-        if (body.sunSprite) {
-          body.sunSprite.scale.set(radius * 3.8 * pulse, radius * 3.8 * pulse, 1);
-        }
-
         // Sun axial spin
         body.mesh.rotation.y = this.physics.calculateAxialRotation('sun');
         continue;
