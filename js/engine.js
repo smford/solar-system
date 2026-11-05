@@ -30,6 +30,9 @@ export class SimulationEngine {
     this.tweenProgress = 1.0;
     this.tweenDuration = 1.2; // seconds
 
+    // Smooth adaptive zooming state
+    this.targetZoomDist = null;
+
     // Mouse & Raycasting
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2(-999, -999);
@@ -564,6 +567,9 @@ export class SimulationEngine {
     dom.addEventListener('mousemove', (e) => this.onMouseMove(e));
     dom.addEventListener('click', (e) => this.onClick(e));
 
+    // High-performance adaptive wheel zoom (Mac trackpad & mouse wheel calibrated)
+    dom.addEventListener('wheel', (e) => this.onWheel(e), { passive: false, capture: true });
+
     // Keyboard ESC to reset view
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -586,6 +592,60 @@ export class SimulationEngine {
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.checkHover();
+  }
+
+  /**
+   * High-performance adaptive wheel zooming calibrated for Mac trackpads & discrete wheels
+   */
+  onWheel(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    // Cancel any camera transition tween if user scrolls manually
+    if (this.isTransitioningCamera) {
+      this.isTransitioningCamera = false;
+    }
+
+    let dy = e.deltaY;
+    if (e.deltaMode === 1) {
+      dy *= 28; // Lines to pixels
+    } else if (e.deltaMode === 2) {
+      dy *= 350; // Pages to pixels
+    }
+
+    const currentOffset = this.camera.position.clone().sub(this.controls.target);
+    const currentDist = currentOffset.length();
+
+    if (this.targetZoomDist === null || isNaN(this.targetZoomDist)) {
+      this.targetZoomDist = currentDist;
+    }
+
+    // Clamp single-step dy to prevent sudden extreme leaps on rapid multi-finger gestures
+    const clampedDy = Math.max(-140, Math.min(140, dy));
+
+    // Smooth exponential scaling: calibrated for both Mac trackpads (dy ~1-20) and mouse wheels (dy ~100)
+    const zoomFactor = Math.exp(clampedDy * 0.0032);
+
+    this.targetZoomDist = Math.max(
+      this.controls.minDistance,
+      Math.min(this.controls.maxDistance, this.targetZoomDist * zoomFactor)
+    );
+
+    // Zoom-to-cursor bias when zooming IN and no specific body is locked
+    if (clampedDy < 0 && !this.selectedBodyId) {
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersection = new THREE.Vector3();
+      if (this.raycaster.ray.intersectPlane(plane, intersection)) {
+        // Nudge controls target toward cursor intersection point
+        const pull = 0.06;
+        this.controls.target.lerp(intersection, pull);
+      }
+    } else if (clampedDy > 0 && !this.selectedBodyId && this.targetZoomDist > 300) {
+      // Gently bias back toward Sun center (0, 0, 0) as user zooms out to overview
+      this.controls.target.lerp(new THREE.Vector3(0, 0, 0), 0.05);
+    }
   }
 
   checkHover() {
@@ -731,6 +791,7 @@ export class SimulationEngine {
   }
 
   startCameraTween(endCameraPos, endTargetPos) {
+    this.targetZoomDist = null;
     this.cameraStartPos.copy(this.camera.position);
     this.cameraTargetPos.copy(endCameraPos);
 
@@ -851,10 +912,28 @@ export class SimulationEngine {
       }
     }
 
-    // 7. Camera transition interpolation
+    // 7. Smooth adaptive zoom interpolation
+    if (this.targetZoomDist !== null && !this.isTransitioningCamera) {
+      const currentOffset = this.camera.position.clone().sub(this.controls.target);
+      const currentDist = currentOffset.length();
+      const diff = this.targetZoomDist - currentDist;
+
+      if (Math.abs(diff) > 0.01) {
+        const alpha = 1.0 - Math.exp(-18.0 * deltaSeconds);
+        const newDist = currentDist + diff * alpha;
+        currentOffset.setLength(newDist);
+        this.camera.position.copy(this.controls.target).add(currentOffset);
+      } else {
+        currentOffset.setLength(this.targetZoomDist);
+        this.camera.position.copy(this.controls.target).add(currentOffset);
+        this.targetZoomDist = null;
+      }
+    }
+
+    // 8. Camera transition interpolation
     this.updateCameraTween(deltaSeconds);
 
-    // 8. Update orbit controls and render
+    // 9. Update orbit controls and render
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
