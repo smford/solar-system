@@ -4,6 +4,29 @@ Helios is an interactive 3D model of the solar system running directly in the br
 
 Live site: https://stephenford.org/solar-system/
 
+![Helios 3D Solar System Simulation](assets/screenshots/helios_overview.png)
+*Panoramic solar system overview displaying concentric Astronomical Unit (AU) distance circles, planetary orbit lines, and the 3D Main Asteroid Belt.*
+
+---
+
+## Visual Features & Highlights
+
+### Earth Atmospheric Glow & Night-Side City Lights
+![Earth Twilight Terminator and City Lights](assets/screenshots/earth_night_lights.png)
+NASA Blue Marble daytime imagery transitions seamlessly across the twilight terminator into a procedural NASA Black Marble night map with warm metropolitan city lights and a vibrant cyan-blue GLSL atmospheric Fresnel rim glow.
+
+### Saturn Ring System & Solar Shadows
+![Saturn Ring Shadows](assets/screenshots/saturn_ring_shadows.png)
+Analytical GLSL ray tracing projects an authentic curved shadow of Saturn's globe across its rings on the unlit side, while the rings cast subtle shadow bands across Saturn's cloud tops through gaps like the Cassini Division.
+
+### Jupiter System & Observatory Telemetry
+![Jupiter with Galilean Moons and Telemetry](assets/screenshots/jupiter_telemetry.png)
+Jupiter surrounded by its four major Galilean moons (Io, Europa, Ganymede, and Callisto), with the telemetry drawer displaying live physical, compositional, and orbital data.
+
+### Planetarium Surface Sky View
+![Surface Sky View from Mars](assets/screenshots/mars_surface_view.png)
+Surface Sky View mode places you directly on the ground of Mars, Earth, or any other world, tracking the planet's axial rotation to simulate realistic sunrises, sunsets, and celestial transits with optical telescopic zoom.
+
 ---
 
 ## Overview
