@@ -572,21 +572,6 @@ export class SimulationEngine {
       this.controls.minDistance,
       Math.min(this.controls.maxDistance, this.targetZoomDist * zoomFactor)
     );
-
-    // Zoom-to-cursor bias when zooming IN and no specific body is locked
-    if (clampedDy < 0 && !this.selectedBodyId) {
-      this.raycaster.setFromCamera(this.mouse, this.camera);
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const intersection = new THREE.Vector3();
-      if (this.raycaster.ray.intersectPlane(plane, intersection)) {
-        // Nudge controls target toward cursor intersection point
-        const pull = 0.06;
-        this.controls.target.lerp(intersection, pull);
-      }
-    } else if (clampedDy > 0 && !this.selectedBodyId && this.targetZoomDist > 300) {
-      // Gently bias back toward Sun center (0, 0, 0) as user zooms out to overview
-      this.controls.target.lerp(new THREE.Vector3(0, 0, 0), 0.05);
-    }
   }
 
   checkHover() {

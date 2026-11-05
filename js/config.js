@@ -346,7 +346,7 @@ export const TIME_PRESETS = [
   { label: 'Pause', value: 0 },
   { label: '0.25x', value: 0.25 },
   { label: '0.5x', value: 0.5 },
-  { label: '1x (Normal)', value: 1.0 },
+  { label: '1x', value: 1.0 },
   { label: '2x', value: 2.0 },
   { label: '5x', value: 5.0 },
   { label: '10x', value: 10.0 },
