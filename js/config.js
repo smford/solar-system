@@ -95,6 +95,12 @@ export const CELESTIAL_BODIES = {
     eccentricity: 0.0067,
     axialTilt: 177.36,
     orbitColor: '#fde047',
+    atmosphere: {
+      color: [0.98, 0.75, 0.14],
+      power: 2.2,
+      intensity: 1.3,
+      scale: 1.035
+    },
     telemetry: {
       diameter: '12,104 km',
       relativeSize: '0.949 × Earth',
@@ -130,6 +136,12 @@ export const CELESTIAL_BODIES = {
     eccentricity: 0.0167,
     axialTilt: 23.44,
     orbitColor: '#60a5fa',
+    atmosphere: {
+      color: [0.22, 0.74, 0.97],
+      power: 3.2,
+      intensity: 1.1,
+      scale: 1.028
+    },
     hasClouds: true,
     hasMoon: true,
     moon: {
@@ -212,6 +224,12 @@ export const CELESTIAL_BODIES = {
     eccentricity: 0.0934,
     axialTilt: 25.19,
     orbitColor: '#fb923c',
+    atmosphere: {
+      color: [0.98, 0.45, 0.09],
+      power: 4.5,
+      intensity: 0.55,
+      scale: 1.018
+    },
     telemetry: {
       diameter: '6,779 km',
       relativeSize: '0.532 × Earth',
@@ -466,6 +484,12 @@ export const CELESTIAL_BODIES = {
           orbitDistance: 13.5
         },
         orbitDistance: 27.5,
+        atmosphere: {
+          color: [0.92, 0.35, 0.05],
+          power: 2.0,
+          intensity: 1.2,
+          scale: 1.08
+        },
         description: "Saturn's largest moon, veiled in a dense golden nitrogen-methane haze with stable hydrocarbon lakes, rivers, and rain.",
         telemetry: {
           diameter: '5,149 km',
@@ -634,8 +658,8 @@ export const ASTEROID_BELTS = {
       minRadius: 78,
       maxRadius: 132,
       ySpread: 4.0,
-      minScale: 0.25,
-      maxScale: 0.70
+      minScale: 0.35,
+      maxScale: 0.85
     },
     trueScale: {
       minRadius: 252, // 2.1 AU * 120 (comfortably between Mars at 182.9 and Jupiter at 624.0)
@@ -682,8 +706,8 @@ export const ASTEROID_BELTS = {
       minRadius: 330,
       maxRadius: 450,
       ySpread: 12.0,
-      minScale: 0.35,
-      maxScale: 0.90
+      minScale: 0.45,
+      maxScale: 1.10
     },
     trueScale: {
       minRadius: 3660, // 30.5 AU * 120 (proportional beyond Neptune at 3612.0)

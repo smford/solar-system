@@ -298,6 +298,13 @@ export class SimulationEngine {
       mesh.add(cloudsMesh);
     }
 
+    // Atmospheric Fresnel Rim Glow
+    let atmosphereMesh = null;
+    if (config.atmosphere) {
+      atmosphereMesh = this.buildAtmosphereMesh(config.atmosphere);
+      mesh.add(atmosphereMesh);
+    }
+
     // Natural Satellites / Major Moons
     const moonsList = [];
     let moonGroup = null;
@@ -340,6 +347,7 @@ export class SimulationEngine {
       mesh,
       haloMesh,
       cloudsMesh,
+      atmosphereMesh,
       moonGroup,
       moonMesh,
       moons: moonsList,
@@ -386,6 +394,14 @@ export class SimulationEngine {
     mesh.scale.set(radius, radius, radius);
     mesh.userData = { bodyId: moonConfig.id, parentId: parentKey, isMoon: true };
     group.add(mesh);
+
+    // Atmospheric Fresnel Rim Glow (e.g. Titan's dense photochemical haze)
+    let atmosphereMesh = null;
+    if (moonConfig.atmosphere) {
+      atmosphereMesh = this.buildAtmosphereMesh(moonConfig.atmosphere);
+      mesh.add(atmosphereMesh);
+    }
+
     this.scene.add(group);
 
     // Vector Thin Moon Orbit Line around host planet
@@ -415,8 +431,72 @@ export class SimulationEngine {
       config: moonConfig,
       group,
       mesh,
+      atmosphereMesh,
       orbitLine
     };
+  }
+
+  /**
+   * Build atmospheric shell mesh with custom GLSL Fresnel glow shader
+   * Features physically credible solar day/night limb modulation
+   */
+  buildAtmosphereMesh(atmConfig) {
+    const scale = atmConfig.scale || 1.025;
+    const geometry = new THREE.SphereGeometry(scale, 64, 64);
+
+    const colorVec = Array.isArray(atmConfig.color)
+      ? new THREE.Vector3(atmConfig.color[0], atmConfig.color[1], atmConfig.color[2])
+      : new THREE.Vector3(0.22, 0.74, 0.97);
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: colorVec },
+        uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
+        uPower: { value: atmConfig.power !== undefined ? atmConfig.power : 3.0 },
+        uIntensity: { value: atmConfig.intensity !== undefined ? atmConfig.intensity : 1.0 }
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewDir;
+
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vNormal = normalize(mat3(modelMatrix) * normal);
+          vViewDir = normalize(cameraPosition - worldPos.xyz);
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform vec3 uSunDirection;
+        uniform float uPower;
+        uniform float uIntensity;
+
+        varying vec3 vNormal;
+        varying vec3 vViewDir;
+
+        void main() {
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewDir);
+
+          float fresnel = pow(1.0 - max(0.0, dot(normal, viewDir)), uPower);
+          float sunDot = dot(normal, uSunDirection);
+          float dayFactor = smoothstep(-0.25, 0.45, sunDot);
+
+          gl_FragColor = vec4(uColor, fresnel * dayFactor * uIntensity);
+        }
+      `,
+      side: THREE.FrontSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = 'atmosphereMesh';
+    mesh.renderOrder = 2;
+    mesh.raycast = () => {}; // Prevent intercepting raycaster clicks/hovers
+    return mesh;
   }
 
   buildRings(key, config) {
@@ -642,11 +722,12 @@ export class SimulationEngine {
       // Low-poly dodecahedron geometry for irregular, faceted space rocks
       const baseGeo = new THREE.DodecahedronGeometry(1, 0);
 
-      // MeshStandardMaterial with flatShading to catch solar illumination on individual rock facets
+      // MeshStandardMaterial with flatShading and emissive boost for high-visibility from overview zoom
       const material = new THREE.MeshStandardMaterial({
         roughness: beltKey === 'kuiperBelt' ? 0.65 : 0.82,
         metalness: beltKey === 'kuiperBelt' ? 0.08 : 0.14,
-        flatShading: true
+        flatShading: true,
+        emissive: new THREE.Color(0x222222)
       });
 
       const instancedMesh = new THREE.InstancedMesh(baseGeo, material, count);
@@ -879,6 +960,41 @@ export class SimulationEngine {
       belt.mesh.visible = this.beltsVisible;
     }
     return this.beltsVisible;
+  }
+
+  /**
+   * Update atmospheric Fresnel glow solar illumination vectors
+   * Direction points from body/moon towards Sun at origin (0, 0, 0)
+   */
+  updateAtmospheres() {
+    const worldPos = new THREE.Vector3();
+
+    for (const body of Object.values(this.bodies)) {
+      if (body.atmosphereMesh && body.group) {
+        body.group.getWorldPosition(worldPos);
+        if (worldPos.lengthSq() > 0.0001) {
+          const sunDir = worldPos.clone().negate().normalize();
+          body.atmosphereMesh.material.uniforms.uSunDirection.value.copy(sunDir);
+        }
+      }
+    }
+
+    for (const moon of Object.values(this.moons)) {
+      if (moon.atmosphereMesh && moon.group) {
+        moon.group.getWorldPosition(worldPos);
+        if (worldPos.lengthSq() > 0.0001) {
+          const sunDir = worldPos.clone().negate().normalize();
+          moon.atmosphereMesh.material.uniforms.uSunDirection.value.copy(sunDir);
+        }
+      }
+    }
+  }
+
+  /**
+   * General engine update step for external callers or tests
+   */
+  update(deltaSeconds) {
+    this.updateAtmospheres();
   }
 
   /**
@@ -1354,7 +1470,10 @@ export class SimulationEngine {
       moon.mesh.rotation.y = this.physics.calculateMoonAxialRotation(moon.config);
     }
 
-    // 4c. Update 3D Asteroid Belts (Main Belt & Kuiper Belt) with Keplerian revolution and dynamic scale
+    // 4c. Update atmospheric Fresnel solar illumination vectors
+    this.updateAtmospheres();
+
+    // 4d. Update 3D Asteroid Belts (Main Belt & Kuiper Belt) with Keplerian revolution and dynamic scale
     this.updateAsteroidBelts();
 
     // 5. Update 2D screen positions of all planetary locator markers
