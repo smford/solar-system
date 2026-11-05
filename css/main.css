@@ -118,15 +118,66 @@ html, body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: 20px;
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
 .epoch-label {
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.epoch-date-input {
+  background: rgba(14, 20, 36, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  color-scheme: dark;
+  transition: all 0.15s ease;
+}
+
+.epoch-date-input:hover,
+.epoch-date-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.epoch-btn {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.epoch-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+}
+
+.epoch-btn:active {
+  transform: scale(0.96);
 }
 
 .epoch-val {

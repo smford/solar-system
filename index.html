@@ -42,8 +42,16 @@
 
     <div class="telemetry-header-meta">
       <div id="epoch-display" class="epoch-indicator">
-        <span class="epoch-label">SIMULATION EPOCH:</span>
-        <span class="epoch-val">2026-01-01</span>
+        <span class="epoch-label">EPOCH:</span>
+        <input id="epoch-date-picker" type="date" class="epoch-date-input" min="1800-01-01" max="2200-12-31" value="2026-01-01" title="Select specific simulation date">
+        <button id="btn-epoch-today" class="epoch-btn" title="Set simulation to current date (Today)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>TODAY</span>
+        </button>
+        <span id="epoch-elapsed" class="epoch-elapsed">(T+ 0.0d)</span>
       </div>
       <div id="fps-display" class="fps-badge">60 FPS</div>
     </div>

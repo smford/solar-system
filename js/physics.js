@@ -71,6 +71,36 @@ export class PhysicsEngine {
   }
 
   /**
+   * Set simulation epoch to a specific date
+   */
+  setDate(date) {
+    let targetMs;
+    if (date instanceof Date) {
+      targetMs = date.getTime();
+    } else if (typeof date === 'string') {
+      const parts = date.split('-');
+      if (parts.length === 3) {
+        // Parse UTC YYYY-MM-DD
+        targetMs = Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      } else {
+        targetMs = new Date(date).getTime();
+      }
+    } else {
+      targetMs = Number(date);
+    }
+
+    if (isNaN(targetMs)) return;
+    this.elapsedDays = (targetMs - this.referenceDate.getTime()) / 86400000;
+  }
+
+  /**
+   * Jump simulation epoch to real-world current date/time
+   */
+  setCurrentDate() {
+    this.setDate(new Date());
+  }
+
+  /**
    * Get body distance and radius smoothly blended between exploration and true scale
    */
   getBodyDimensions(bodyId) {

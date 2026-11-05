@@ -10,6 +10,9 @@ export class UIController {
 
     // DOM Elements
     this.epochDisplay = document.getElementById('epoch-display');
+    this.epochDatePicker = document.getElementById('epoch-date-picker');
+    this.epochTodayBtn = document.getElementById('btn-epoch-today');
+    this.epochElapsed = document.getElementById('epoch-elapsed');
     this.fpsDisplay = document.getElementById('fps-display');
     this.playPauseBtn = document.getElementById('btn-play-pause');
     this.reverseBtn = document.getElementById('btn-reverse');
@@ -162,6 +165,28 @@ export class UIController {
     if (this.telemetryCloseBtn) {
       this.telemetryCloseBtn.addEventListener('click', () => {
         this.engine.resetCameraView();
+      });
+    }
+
+    // Epoch Date Controls
+    if (this.epochDatePicker) {
+      this.epochDatePicker.addEventListener('change', (e) => {
+        if (e.target.value) {
+          this.engine.physics.setDate(e.target.value);
+        }
+      });
+      this.epochDatePicker.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    if (this.epochTodayBtn) {
+      this.epochTodayBtn.addEventListener('click', () => {
+        this.engine.physics.setCurrentDate();
+        if (this.epochDatePicker) {
+          const nowStr = this.engine.physics.getSimulatedDate().toISOString().split('T')[0];
+          this.epochDatePicker.value = nowStr;
+        }
       });
     }
 
@@ -326,12 +351,23 @@ export class UIController {
 
   startEpochUpdater() {
     const update = () => {
-      if (this.epochDisplay) {
-        const date = this.engine.physics.getSimulatedDate();
-        const dateStr = date.toISOString().split('T')[0];
-        const elapsed = this.engine.physics.elapsedDays.toFixed(1);
-        this.epochDisplay.innerHTML = `<span class="epoch-label">SIMULATION EPOCH:</span> <span class="epoch-val">${dateStr}</span> <span class="epoch-elapsed">(T+ ${elapsed}d)</span>`;
+      const date = this.engine.physics.getSimulatedDate();
+      const dateStr = date.toISOString().split('T')[0];
+      const elapsed = this.engine.physics.elapsedDays;
+      const sign = elapsed >= 0 ? '+' : '-';
+      const absDays = Math.abs(elapsed).toFixed(1);
+
+      // Only update input value when user is not actively editing it
+      if (this.epochDatePicker && document.activeElement !== this.epochDatePicker) {
+        if (this.epochDatePicker.value !== dateStr) {
+          this.epochDatePicker.value = dateStr;
+        }
       }
+
+      if (this.epochElapsed) {
+        this.epochElapsed.textContent = `(T${sign} ${absDays}d)`;
+      }
+
       requestAnimationFrame(update);
     };
     requestAnimationFrame(update);
