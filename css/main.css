@@ -273,6 +273,12 @@ html, body {
   background: rgba(250, 204, 21, 0.12);
 }
 
+.hud-btn.belts-off {
+  opacity: 0.55;
+  border-color: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+}
+
 /* Control Dock */
 .control-dock {
   position: absolute;
@@ -352,6 +358,23 @@ html, body {
   background: rgba(56, 189, 248, 0.15);
   border-color: rgba(56, 189, 248, 0.35);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.body-chip.belt-chip {
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+}
+
+.body-chip.belt-chip:hover {
+  border-color: var(--border-accent);
+}
+
+.body-chip.belt-chip.active {
+  border-style: solid;
+}
+
+.belt-dot {
+  border-radius: 2px !important;
+  transform: rotate(45deg);
 }
 
 /* Timeline & Warp Controls */

@@ -623,6 +623,119 @@ export const APP_CONFIG = {
   defaultCameraTarget: { x: 0, y: 0, z: 0 }
 };
 
+export const ASTEROID_BELTS = {
+  mainBelt: {
+    id: 'mainBelt',
+    name: 'Main Asteroid Belt',
+    type: 'Circumstellar Asteroid Disc',
+    color: '#a8a29e',
+    count: 6000,
+    exploration: {
+      minRadius: 78,
+      maxRadius: 132,
+      ySpread: 4.0,
+      minScale: 0.25,
+      maxScale: 0.70
+    },
+    trueScale: {
+      minRadius: 252, // 2.1 AU * 120 (comfortably between Mars at 182.9 and Jupiter at 624.0)
+      maxRadius: 396, // 3.3 AU * 120
+      ySpread: 14.0,
+      minScale: 0.08,
+      maxScale: 0.22
+    },
+    minAU: 2.1,
+    maxAU: 3.3,
+    colorPalette: [
+      '#38383a', // C-type: Carbonaceous chondrite (dark grey / charcoal)
+      '#48484a',
+      '#58585c',
+      '#636366',
+      '#8c8275', // S-type: Silicate stone (grey-brown / stony)
+      '#9a8f80',
+      '#a89f91',
+      '#b8ad9e',
+      '#d4d4d8', // M-type: Metallic nickel-iron (reflective light grey)
+      '#a1a1aa',
+      '#b0b0b8'
+    ],
+    description: "A vast toroidal collection of irregular rocky and metallic planetesimals orbiting between Mars and Jupiter, shaped by Jovian orbital resonances and Kirkwood gaps.",
+    telemetry: {
+      location: 'Between Mars (~1.52 AU) and Jupiter (~5.20 AU)',
+      semiMajorAxis: '2.1–3.3 AU (314–494 million km)',
+      orbitalPeriod: '3.0–6.0 Earth years (Keplerian)',
+      totalMass: '~2.4 × 10²¹ kg (~4% of Earth\'s Moon)',
+      largestBodies: 'Ceres (d=939 km), Vesta (d=525 km), Pallas (d=512 km), Hygiea (d=434 km)',
+      composition: '75% C-type (Carbonaceous), 17% S-type (Silicate), 8% M-type (Metallic)',
+      estimatedCount: '1.1–1.9 million asteroids > 1 km; millions of boulders & pebbles',
+      classification: 'Circumstellar planetary debris disc'
+    }
+  },
+
+  kuiperBelt: {
+    id: 'kuiperBelt',
+    name: 'Kuiper Belt',
+    type: 'Trans-Neptunian Circumstellar Disc',
+    color: '#93c5fd',
+    count: 4500,
+    exploration: {
+      minRadius: 330,
+      maxRadius: 450,
+      ySpread: 12.0,
+      minScale: 0.35,
+      maxScale: 0.90
+    },
+    trueScale: {
+      minRadius: 3660, // 30.5 AU * 120 (proportional beyond Neptune at 3612.0)
+      maxRadius: 6000, // 50.0 AU * 120
+      ySpread: 160.0,
+      minScale: 0.14,
+      maxScale: 0.38
+    },
+    minAU: 30.5,
+    maxAU: 50.0,
+    colorPalette: [
+      '#a5c8e4', // Pale icy blue / volatile nitrogen & water ice
+      '#cbe5ff',
+      '#88b4d8',
+      '#bfdbfe',
+      '#b86d4b', // Tholin reddish-brown / organic refractory mantle
+      '#9e5338',
+      '#cf7e59',
+      '#8f462e',
+      '#64748b', // Muted icy slate / dark silicate-ice mix
+      '#475569',
+      '#5a687a'
+    ],
+    description: "A colossal, frozen circumstellar disc of ancient icy remnants, cometary nuclei, and dwarf planets orbiting beyond Neptune in the cold outer frontier of our Solar System.",
+    telemetry: {
+      location: 'Beyond Neptune (30.1 AU to ~50 AU)',
+      semiMajorAxis: '30.5–50.0 AU (4.5–7.5 billion km)',
+      orbitalPeriod: '165–354 Earth years (Keplerian)',
+      totalMass: '~1.8 × 10²³ kg (1/10 to 1/30 of Earth)',
+      largestBodies: 'Pluto (d=2,377 km), Eris (d=2,326 km), Haumea, Makemake, Gonggong, Quaoar',
+      composition: 'Volatile ices (nitrogen, methane, carbon monoxide, water), complex tholins, silicates',
+      estimatedCount: '> 100,000 objects > 100 km; hundreds of millions of icy bodies',
+      classification: 'Trans-Neptunian icy planetesimal disc'
+    }
+  }
+};
+
+/**
+ * Helper to locate an asteroid belt by id
+ */
+export function findBeltById(beltId) {
+  if (!beltId) return null;
+  return ASTEROID_BELTS[beltId] || null;
+}
+
+/**
+ * Helper to retrieve a flat array of all registered asteroid belts
+ */
+export function getAllBelts() {
+  return Object.values(ASTEROID_BELTS);
+}
+
 /**
  * Helper to locate any natural satellite across parent planets by id
  */

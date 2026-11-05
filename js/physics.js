@@ -291,4 +291,40 @@ export class PhysicsEngine {
     }
     return points;
   }
+
+  /**
+   * Compute Keplerian angular velocity for an asteroid belt particle
+   * By Kepler's Third Law (T^2 = a^3), angular velocity omega = 2*pi/T is strictly
+   * proportional to a^(-3/2) (r^-3/2).
+   * @param {number} semiMajorAxisAU Semi-major axis in Astronomical Units
+   * @returns {number} Angular velocity in radians per Earth day
+   */
+  calculateBeltKeplerianVelocity(semiMajorAxisAU) {
+    const periodDays = 365.256 * Math.pow(semiMajorAxisAU, 1.5);
+    return (2 * Math.PI) / periodDays;
+  }
+
+  /**
+   * Calculate dynamic position and scale for an asteroid belt particle with smooth scale transition
+   */
+  calculateBeltParticlePosition(particleData, elapsedDays, scaleInterpolation) {
+    const t = scaleInterpolation;
+    const r = particleData.rExp * (1 - t) + particleData.rTrue * t;
+    const y = particleData.yExp * (1 - t) + particleData.yTrue * t;
+    const s = particleData.sExp * (1 - t) + particleData.sTrue * t;
+
+    // Keplerian orbital revolution
+    const angle = particleData.theta0 + particleData.omega * elapsedDays;
+    const e = particleData.eccentricity || 0;
+
+    // Elliptical coordinates with focus offset
+    const a = r;
+    const b = a * Math.sqrt(Math.max(0.001, 1 - e * e));
+    const c = a * e;
+
+    const x = a * Math.cos(angle) - c;
+    const z = b * Math.sin(angle);
+
+    return { x, y, z, scale: s };
+  }
 }

@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CELESTIAL_BODIES, APP_CONFIG } from './config.js';
+import { CELESTIAL_BODIES, APP_CONFIG, ASTEROID_BELTS } from './config.js';
 import { PhysicsEngine } from './physics.js';
 import { TextureManager } from './textures.js';
 
@@ -16,6 +16,8 @@ export class SimulationEngine {
 
     this.bodies = {};
     this.moons = {};
+    this.belts = {};
+    this.beltsVisible = true;
     this.orbitLines = {};
     this.planetMarkers = {};
     this.moonOrbitLine = null;
@@ -51,6 +53,7 @@ export class SimulationEngine {
     this.initScene();
     this.initLighting();
     this.initCelestialBodies();
+    this.initAsteroidBelts();
     this.initStarfield();
     this.initPlanetMarkers();
     this.initEvents();
@@ -488,6 +491,257 @@ export class SimulationEngine {
   }
 
   /**
+   * Initialize 3D Main Asteroid Belt and Kuiper Belt with instanced low-poly meshes
+   */
+  initAsteroidBelts() {
+    this.belts = {};
+    this.beltsVisible = true;
+
+    for (const [beltKey, beltConfig] of Object.entries(ASTEROID_BELTS)) {
+      const count = beltConfig.count;
+      // Low-poly dodecahedron geometry for irregular, faceted space rocks
+      const baseGeo = new THREE.DodecahedronGeometry(1, 0);
+
+      // MeshStandardMaterial with flatShading to catch solar illumination on individual rock facets
+      const material = new THREE.MeshStandardMaterial({
+        roughness: beltKey === 'kuiperBelt' ? 0.65 : 0.82,
+        metalness: beltKey === 'kuiperBelt' ? 0.08 : 0.14,
+        flatShading: true
+      });
+
+      const instancedMesh = new THREE.InstancedMesh(baseGeo, material, count);
+      instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      instancedMesh.name = `${beltKey}_mesh`;
+      instancedMesh.userData = { beltId: beltKey };
+
+      // Pre-allocate typed arrays for maximum performance and zero GC overhead
+      const rExp = new Float32Array(count);
+      const rTrue = new Float32Array(count);
+      const yExp = new Float32Array(count);
+      const yTrue = new Float32Array(count);
+      const sExp = new Float32Array(count);
+      const sTrue = new Float32Array(count);
+      const theta0 = new Float32Array(count);
+      const omega = new Float32Array(count);
+      const ecc = new Float32Array(count);
+      const rot = new Float32Array(count * 9); // 3x3 orientation & shape matrix
+
+      const palette = beltConfig.colorPalette;
+      const dummyColor = new THREE.Color();
+      const dummyObj = new THREE.Object3D();
+
+      for (let i = 0; i < count; i++) {
+        // Triangular distribution centered around 0.5 for denser core
+        const u = (Math.random() + Math.random()) * 0.5;
+
+        // Radii in exploration scale and true scale
+        const minRExp = beltConfig.exploration.minRadius;
+        const maxRExp = beltConfig.exploration.maxRadius;
+        rExp[i] = minRExp + u * (maxRExp - minRExp);
+
+        const minAU = beltConfig.minAU;
+        const maxAU = beltConfig.maxAU;
+        const aAU = minAU + u * (maxAU - minAU);
+        // In true scale: 1.0 AU = 120 units
+        rTrue[i] = aAU * 120.0;
+
+        // Vertical spread Y
+        const ySpreadExp = beltConfig.exploration.ySpread;
+        const ySpreadTrue = beltConfig.trueScale.ySpread;
+        // Natural bell-shaped vertical distribution
+        const vSpread = (Math.random() + Math.random() - 1.0);
+        yExp[i] = vSpread * ySpreadExp;
+        yTrue[i] = vSpread * ySpreadTrue;
+
+        // Size / scale
+        const minSExp = beltConfig.exploration.minScale;
+        const maxSExp = beltConfig.exploration.maxScale;
+        sExp[i] = minSExp + Math.random() * (maxSExp - minSExp);
+
+        const minSTrue = beltConfig.trueScale.minScale;
+        const maxSTrue = beltConfig.trueScale.maxScale;
+        sTrue[i] = minSTrue + Math.random() * (maxSTrue - minSTrue);
+
+        // Initial orbital phase angle
+        theta0[i] = Math.random() * Math.PI * 2;
+
+        // Keplerian angular velocity: proportional to a^(-3/2) (r^-3/2)
+        omega[i] = this.physics.calculateBeltKeplerianVelocity(aAU);
+
+        // Small orbital eccentricity (0.01 to 0.08)
+        ecc[i] = 0.01 + Math.random() * 0.07;
+
+        // Randomized non-uniform shape scaling and 3D orientation for unique rocky asteroid shapes
+        dummyObj.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2
+        );
+        // Potato aspect ratio distortion
+        dummyObj.scale.set(
+          0.75 + Math.random() * 0.5,
+          0.75 + Math.random() * 0.5,
+          0.75 + Math.random() * 0.5
+        );
+        dummyObj.updateMatrix();
+
+        // Extract 3x3 rotation/shape matrix into rot array
+        const me = dummyObj.matrix.elements;
+        const rIdx = i * 9;
+        rot[rIdx]     = me[0];
+        rot[rIdx + 1] = me[1];
+        rot[rIdx + 2] = me[2];
+        rot[rIdx + 3] = me[4];
+        rot[rIdx + 4] = me[5];
+        rot[rIdx + 5] = me[6];
+        rot[rIdx + 6] = me[8];
+        rot[rIdx + 7] = me[9];
+        rot[rIdx + 8] = me[10];
+
+        // Instance Color: picked from palette with subtle lightness variation
+        dummyColor.set(palette[Math.floor(Math.random() * palette.length)]);
+        const hsl = {};
+        dummyColor.getHSL(hsl);
+        hsl.l = Math.max(0.08, Math.min(0.92, hsl.l * (0.85 + Math.random() * 0.3)));
+        dummyColor.setHSL(hsl.h, hsl.s, hsl.l);
+        instancedMesh.setColorAt(i, dummyColor);
+      }
+
+      if (instancedMesh.instanceColor) {
+        instancedMesh.instanceColor.needsUpdate = true;
+      }
+
+      this.scene.add(instancedMesh);
+
+      this.belts[beltKey] = {
+        id: beltKey,
+        config: beltConfig,
+        mesh: instancedMesh,
+        count,
+        data: {
+          rExp,
+          rTrue,
+          yExp,
+          yTrue,
+          sExp,
+          sTrue,
+          theta0,
+          omega,
+          ecc,
+          rot
+        }
+      };
+    }
+
+    // Initial positioning
+    this.updateAsteroidBelts();
+  }
+
+  /**
+   * Update asteroid belt particle positions using Keplerian orbital dynamics (omega ~ r^-3/2)
+   * and smooth scale interpolation between Exploration Scale and True Scale.
+   */
+  updateAsteroidBelts() {
+    if (!this.belts) return;
+
+    for (const belt of Object.values(this.belts)) {
+      if (!this.beltsVisible) {
+        if (belt.mesh.visible) belt.mesh.visible = false;
+        continue;
+      } else {
+        if (!belt.mesh.visible) belt.mesh.visible = true;
+      }
+
+      const count = belt.count;
+      const data = belt.data;
+      const array = belt.mesh.instanceMatrix.array;
+      const elapsedDays = this.physics.elapsedDays;
+      const t = this.physics.getEffectiveScaleInterpolation();
+
+      const rExp = data.rExp;
+      const rTrue = data.rTrue;
+      const yExp = data.yExp;
+      const yTrue = data.yTrue;
+      const sExp = data.sExp;
+      const sTrue = data.sTrue;
+      const theta0 = data.theta0;
+      const omega = data.omega;
+      const ecc = data.ecc;
+      const rot = data.rot;
+
+      for (let i = 0; i < count; i++) {
+        // Radius, vertical offset, and scale blended between exploration and true scale
+        const r = rExp[i] * (1 - t) + rTrue[i] * t;
+        const y = yExp[i] * (1 - t) + yTrue[i] * t;
+        const s = sExp[i] * (1 - t) + sTrue[i] * t;
+
+        // Keplerian orbital revolution: omega is proportional to r^(-3/2)
+        const angle = theta0[i] + omega[i] * elapsedDays;
+        const e = ecc[i];
+
+        // Elliptical coordinates with focal offset
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const a = r;
+        const b = a * Math.sqrt(Math.max(0.001, 1 - e * e));
+        const c = a * e;
+
+        const x = a * cos - c;
+        const z = b * sin;
+
+        // Apply scale to precomputed 3x3 rotation/shape matrix
+        const idx = i * 16;
+        const rIdx = i * 9;
+
+        array[idx]      = rot[rIdx]     * s;
+        array[idx + 1]  = rot[rIdx + 1] * s;
+        array[idx + 2]  = rot[rIdx + 2] * s;
+        array[idx + 3]  = 0;
+
+        array[idx + 4]  = rot[rIdx + 3] * s;
+        array[idx + 5]  = rot[rIdx + 4] * s;
+        array[idx + 6]  = rot[rIdx + 5] * s;
+        array[idx + 7]  = 0;
+
+        array[idx + 8]  = rot[rIdx + 6] * s;
+        array[idx + 9]  = rot[rIdx + 7] * s;
+        array[idx + 10] = rot[rIdx + 8] * s;
+        array[idx + 11] = 0;
+
+        // Position coordinates
+        array[idx + 12] = x;
+        array[idx + 13] = y;
+        array[idx + 14] = z;
+        array[idx + 15] = 1.0;
+      }
+
+      belt.mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Toggle visibility of asteroid belts
+   */
+  toggleBelts() {
+    this.beltsVisible = !this.beltsVisible;
+    for (const belt of Object.values(this.belts)) {
+      belt.mesh.visible = this.beltsVisible;
+    }
+    return this.beltsVisible;
+  }
+
+  /**
+   * Set visibility of asteroid belts
+   */
+  setBeltsVisible(visible) {
+    this.beltsVisible = Boolean(visible);
+    for (const belt of Object.values(this.belts)) {
+      belt.mesh.visible = this.beltsVisible;
+    }
+    return this.beltsVisible;
+  }
+
+  /**
    * Initialize screen-space planetary locator markers & name badges
    */
   initPlanetMarkers() {
@@ -728,10 +982,10 @@ export class SimulationEngine {
   }
 
   /**
-   * Programmatic smooth camera tween towards celestial body or moon
+   * Programmatic smooth camera tween towards celestial body, moon, or asteroid belt
    */
   focusBody(bodyId) {
-    if (!this.bodies[bodyId] && !this.moons[bodyId]) return;
+    if (!this.bodies[bodyId] && !this.moons[bodyId] && !this.belts[bodyId]) return;
 
     // Reset previous selected orbit line
     if (this.selectedBodyId) {
@@ -753,24 +1007,39 @@ export class SimulationEngine {
       activeLine.material.color.set(0xffffff);
     }
 
-    let targetPos, viewDist;
-    if (this.bodies[bodyId]) {
+    let targetPos, cameraEnd;
+    if (this.belts[bodyId]) {
+      // Focus on the entire belt from an elevated panoramic viewpoint
+      targetPos = new THREE.Vector3(0, 0, 0);
+      const t = this.physics.getEffectiveScaleInterpolation();
+      if (bodyId === 'mainBelt') {
+        const dist = 160 * (1 - t) + 520 * t;
+        cameraEnd = new THREE.Vector3(0, dist * 0.72, dist * 0.95);
+      } else {
+        const dist = 480 * (1 - t) + 6800 * t;
+        cameraEnd = new THREE.Vector3(0, dist * 0.65, dist * 0.85);
+      }
+    } else if (this.bodies[bodyId]) {
       const body = this.bodies[bodyId];
       targetPos = body.group.position.clone();
       const { radius } = this.physics.getBodyDimensions(bodyId);
-      viewDist = Math.max(radius * 4.5, 9.0);
+      const viewDist = Math.max(radius * 4.5, 9.0);
+      cameraEnd = new THREE.Vector3(
+        targetPos.x + viewDist * 0.7,
+        targetPos.y + viewDist * 0.45,
+        targetPos.z + viewDist * 0.8
+      );
     } else {
       const moon = this.moons[bodyId];
       targetPos = moon.group.position.clone();
       const { radius } = this.physics.getMoonDimensions(moon.config);
-      viewDist = Math.max(radius * 5.0, 3.2);
+      const viewDist = Math.max(radius * 5.0, 3.2);
+      cameraEnd = new THREE.Vector3(
+        targetPos.x + viewDist * 0.7,
+        targetPos.y + viewDist * 0.45,
+        targetPos.z + viewDist * 0.8
+      );
     }
-
-    const cameraEnd = new THREE.Vector3(
-      targetPos.x + viewDist * 0.7,
-      targetPos.y + viewDist * 0.45,
-      targetPos.z + viewDist * 0.8
-    );
 
     this.startCameraTween(cameraEnd, targetPos);
 
@@ -936,6 +1205,9 @@ export class SimulationEngine {
       // Synchronous tidal axial rotation
       moon.mesh.rotation.y = this.physics.calculateMoonAxialRotation(moon.config);
     }
+
+    // 4c. Update 3D Asteroid Belts (Main Belt & Kuiper Belt) with Keplerian revolution and dynamic scale
+    this.updateAsteroidBelts();
 
     // 5. Update 2D screen positions of all planetary locator markers
     this.updatePlanetMarkers();

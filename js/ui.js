@@ -2,7 +2,7 @@
  * HELIOS User Interface & Telemetry HUD Controller
  * Minimalist dark glassmorphic control dock, side telemetry drawer, timeline scrubbers, and selectors.
  */
-import { CELESTIAL_BODIES, TIME_PRESETS, findMoonById } from './config.js';
+import { CELESTIAL_BODIES, TIME_PRESETS, findMoonById, ASTEROID_BELTS, findBeltById } from './config.js';
 
 export class UIController {
   constructor(engine) {
@@ -20,6 +20,7 @@ export class UIController {
     this.warpSlider = document.getElementById('warp-slider');
     this.warpValueText = document.getElementById('warp-value-text');
     this.scaleModeToggle = document.getElementById('scale-toggle');
+    this.btnToggleBelts = document.getElementById('btn-toggle-belts');
     this.bodyQuickBar = document.getElementById('body-quick-bar');
     this.resetViewBtn = document.getElementById('btn-reset-view');
     this.toggleUiBtn = document.getElementById('btn-toggle-ui');
@@ -104,6 +105,30 @@ export class UIController {
 
       this.bodyQuickBar.appendChild(btn);
     }
+
+    // Add Asteroid & Kuiper Belt quick selector chips
+    for (const [beltKey, beltConfig] of Object.entries(ASTEROID_BELTS)) {
+      const btn = document.createElement('button');
+      btn.className = 'body-chip belt-chip';
+      btn.dataset.bodyId = beltKey;
+      btn.title = `Inspect ${beltConfig.name}`;
+
+      const dot = document.createElement('span');
+      dot.className = 'body-dot belt-dot';
+      dot.style.backgroundColor = beltConfig.color;
+
+      const label = document.createElement('span');
+      label.textContent = beltConfig.name;
+
+      btn.appendChild(dot);
+      btn.appendChild(label);
+
+      btn.addEventListener('click', () => {
+        this.engine.focusBody(beltKey);
+      });
+
+      this.bodyQuickBar.appendChild(btn);
+    }
   }
 
   bindEvents() {
@@ -156,6 +181,14 @@ export class UIController {
       });
     }
 
+    // Toggle Asteroid Belts (Main Belt & Kuiper Belt)
+    if (this.btnToggleBelts) {
+      this.btnToggleBelts.addEventListener('click', () => {
+        const visible = this.engine.toggleBelts();
+        this.updateBeltsButtonUI(visible);
+      });
+    }
+
     // Reset View
     if (this.resetViewBtn) {
       this.resetViewBtn.addEventListener('click', () => {
@@ -204,6 +237,12 @@ export class UIController {
       // Toggle UI visibility with 'H' key (when not typing in an input)
       if ((e.key === 'h' || e.key === 'H') && e.target.tagName !== 'INPUT') {
         this.toggleUIVisibility();
+      }
+
+      // Toggle Asteroid Belts visibility with 'B' key
+      if ((e.key === 'b' || e.key === 'B') && e.target.tagName !== 'INPUT') {
+        const visible = this.engine.toggleBelts();
+        this.updateBeltsButtonUI(visible);
       }
 
       // Space for Play/Pause
@@ -311,6 +350,17 @@ export class UIController {
     }
   }
 
+  updateBeltsButtonUI(visible) {
+    if (!this.btnToggleBelts) return;
+    const label = this.btnToggleBelts.querySelector('.toggle-belts-label');
+    if (label) {
+      label.textContent = visible ? 'BELTS: ON' : 'BELTS: OFF';
+    }
+    this.btnToggleBelts.classList.toggle('active', visible);
+    this.btnToggleBelts.classList.toggle('belts-off', !visible);
+    this.btnToggleBelts.title = visible ? 'Toggle Asteroid & Kuiper Belts (B)' : 'Show Asteroid & Kuiper Belts (B)';
+  }
+
   handleBodySelected(bodyId) {
     // Update quick bar active state
     const chips = this.bodyQuickBar.querySelectorAll('.body-chip');
@@ -330,16 +380,16 @@ export class UIController {
   }
 
   openTelemetry(bodyId) {
-    const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId);
+    const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId) || findBeltById(bodyId);
     if (!config || !this.telemetryDrawer) return;
 
     this.telemetryTitle.textContent = config.name.toUpperCase();
-    this.telemetryType.textContent = config.type || `NATURAL SATELLITE (${(config.parentId || 'PLANET').toUpperCase()})`;
+    this.telemetryType.textContent = config.type || (config.parentId ? `NATURAL SATELLITE (${config.parentId.toUpperCase()})` : 'CELESTIAL SYSTEM');
 
     // Render Telemetry data grid
     this.telemetryStats.innerHTML = '';
 
-    // Moon or planet descriptive overview
+    // Moon, planet, or asteroid belt descriptive overview
     if (config.description) {
       const descEl = document.createElement('div');
       descEl.className = 'telemetry-description';
@@ -389,9 +439,14 @@ export class UIController {
       coreTemp: 'CORE TEMPERATURE',
       surfaceGravity: 'SURFACE GRAVITY',
       distanceFromSun: 'MEAN SOLAR DISTANCE',
+      semiMajorAxis: 'SEMI-MAJOR AXIS',
       orbitalPeriod: 'ORBITAL PERIOD',
       rotationPeriod: 'SIDEREAL ROTATION',
       moons: 'NATURAL SATELLITES',
+      largestBodies: 'NOTABLE OBJECTS',
+      largestBody: 'LARGEST OBJECT',
+      estimatedCount: 'ESTIMATED POPULATION',
+      location: 'SOLAR LOCATION',
       parentPlanet: 'HOST PLANET',
       composition: 'CORE COMPOSITION',
       classification: 'CLASSIFICATION'
@@ -407,13 +462,15 @@ export class UIController {
       return;
     }
 
-    const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId);
+    const config = CELESTIAL_BODIES[bodyId] || findMoonById(bodyId) || findBeltById(bodyId);
     if (config) {
       if (config.parentId) {
         const parentName = config.parentId.charAt(0).toUpperCase() + config.parentId.slice(1);
         this.hoverTooltip.textContent = `${config.name} (Moon of ${parentName})`;
-      } else {
+      } else if (config.type) {
         this.hoverTooltip.textContent = `${config.name} (${config.type})`;
+      } else {
+        this.hoverTooltip.textContent = config.name;
       }
       this.hoverTooltip.style.opacity = '1';
     }
